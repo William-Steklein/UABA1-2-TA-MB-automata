@@ -4,7 +4,12 @@
 #include "DFA.h"
 #include "json.hpp"
 
+#include <graphviz/gvc.h>
+
 using json = nlohmann::ordered_json;
+//using json = nlohmann::json;
+
+const std::string DOT_IMAGES_PATH = "../DOT_images/";
 
 DFA::DFA(const std::string& json_filename)
 {
@@ -244,4 +249,61 @@ DFA::State* DFA::getState(const std::string& name) const
 
 	std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
 	return nullptr;
+}
+
+std::string DFA::genDOT() const
+{
+	std::string dot;
+
+	// header
+	dot += "digraph finite_state_machine {";
+	dot += "\n\trankdir=LR;\n\tsize=\"8,5\";";
+
+	// body
+	dot += "\n\n\tnode [shape = doublecircle];";
+
+	for (const auto& state : states)
+	{
+		if (state.second->accepting)
+			dot += " " + state.first;
+	}
+
+	dot += "\n\tnode [shape = circle];\n";
+
+	dot += "\n\tstart -> " + start_state->name;
+
+	for (const auto& state : states)
+	{
+		for (const auto& transition : state.second->transitions)
+		{
+			dot += "\n\t" + state.first + " -> " + transition.second->name;
+			dot += " [ label = \"" + std::string(1, transition.first) + "\" ];";
+		}
+	}
+	dot += "\n}";
+
+	return dot;
+}
+
+bool DFA::genImage() const
+{
+	std::string path = DOT_IMAGES_PATH + "automata.dot";
+
+	std::ofstream file(path);
+	std::string my_string = genDOT();
+	file << my_string;
+	file.close();
+
+	GVC_t* gvc;
+	Agraph_t* g;
+	FILE* fp;
+	gvc = gvContext();
+	fp = fopen((path).c_str(), "r");
+	g = agread(fp, nullptr);
+	gvLayout(gvc, g, "dot");
+	gvRender(gvc, g, "png", fopen((DOT_IMAGES_PATH + "image.png").c_str(), "w"));
+	gvFreeLayout(gvc, g);
+	agclose(g);
+
+	return (gvFreeContext(gvc));
 }

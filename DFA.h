@@ -7,6 +7,7 @@
 #include "json.hpp"
 
 using json = nlohmann::ordered_json;
+//using json = nlohmann::json;
 
 class DFA
 {
@@ -22,7 +23,9 @@ class DFA
 	std::set<char> alphabet;
 
  public:
-	DFA() = default;
+	DFA()
+	{
+	};
 	DFA(const std::string& json_filename);
 	~DFA();
 
@@ -51,6 +54,9 @@ class DFA
 
 	/* Checks if the given sequence of symbols ends at an accepting state */
 	bool accepts(const std::string& string_w) const;
+
+	std::string genDOT() const;
+	bool genImage() const;
 
  private:
 	bool isSymbolInAlphabet(char a) const;

@@ -1,2 +1,4 @@
 .idea
 cmake-build-debug
+DOT_files
+DOT_images
