@@ -1,13 +1,14 @@
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include "DFA.h"
 #include "json.hpp"
 
-using json = nlohmann::json;
+using json = nlohmann::ordered_json;
 
-DFA::DFA()
+DFA::DFA(const std::string& json_filename)
 {
-	load("DFA.json");
+	load(json_filename);
 }
 
 DFA::~DFA()
@@ -27,42 +28,81 @@ bool DFA::load(const std::string& filename)
 		return false;
 	}
 
-	json DFSjson;
-	input >> DFSjson;
+	json DFA_json;
+	input >> DFA_json;
 
-	if (!(DFSjson.contains("type") && DFSjson.contains("alphabet")
-		  && DFSjson.contains("states") && DFSjson.contains("transitions")))
+	if (!(DFA_json.contains("type") && DFA_json.contains("alphabet")
+		  && DFA_json.contains("states") && DFA_json.contains("transitions")))
 	{
 		std::cerr << "Error: " << filename << " has an invalid format" << std::endl;
 		return false;
 	}
 
-	if (DFSjson["type"] != "DFA")
+	if (DFA_json["type"] != "DFA")
 	{
-		std::cerr << "Error: " << filename << " is of the type " << DFSjson["type"]
+		std::cerr << "Error: " << filename << " is of the type " << DFA_json["type"]
 				  << " and not DFA" << std::endl;
 		return false;
 	}
 
-	for (const auto& symbol : DFSjson["alphabet"])
+	for (const auto& symbol : DFA_json["alphabet"])
 	{
 		addSymbol(symbol.get<std::string>()[0]);
 	}
 
-	for (const auto& state : DFSjson["states"])
+	for (const auto& state : DFA_json["states"])
 	{
 		addState(state["name"].get<std::string>(), state["accepting"].get<bool>());
 		if (state["starting"].get<bool>())
 			setStartState(state["name"].get<std::string>());
 	}
 
-	for (const auto& transition : DFSjson["transitions"])
+	for (const auto& transition : DFA_json["transitions"])
 	{
 		addTransition(transition["from"].get<std::string>(), transition["to"].get<std::string>()
 		    , transition["input"].get<std::string>()[0]);
 	}
 
 	return true;
+}
+
+json DFA::save() const
+{
+	json json_DFA;
+
+	json_DFA["type"] = "DFA";
+
+	json_DFA["alphabet"] = json::array();
+	for (auto symbol : alphabet)
+		json_DFA["alphabet"].push_back(std::string(1, symbol));
+
+	for (const auto& state : states)
+	{
+		bool is_start = false;
+		if (state.second == start_state) is_start = true;
+
+		json_DFA["states"].push_back({
+			{"name", state.first},
+			{"starting", is_start},
+			{"accepting", state.second->accepting}
+		});
+
+		for (const auto& transition : state.second->transitions)
+		{
+			json_DFA["transitions"].push_back({
+				{"from", state.first},
+				{"to", transition.second->name},
+				{"input", std::string(1, transition.first)}
+			});
+		}
+	}
+
+	return json_DFA;
+}
+
+void DFA::print() const
+{
+	std::cout << std::setw(4) << save() << std::endl;
 }
 
 void DFA::clear()
@@ -88,7 +128,7 @@ void DFA::removeSymbol(char symbol)
 	alphabet.erase(symbol);
 }
 
-void DFA::setAlphabet(std::string new_alphabet)
+void DFA::setAlphabet(const std::string& new_alphabet)
 {
 	clearAlphabet();
 	for (char symbol : new_alphabet)
@@ -147,7 +187,7 @@ bool DFA::addTransition(const std::string& s1_name, const std::string& s2_name, 
 
 	if (s1->transitions.find(a) != s1->transitions.end())
 	{
-		std::cout << "Changing transition δ(" << s1->name << ", " << a << ")" << std::endl;
+		std::cout << "Overwriting transition δ(" << s1->name << ", " << a << ")" << std::endl;
 	}
 
 	s1->transitions[a] = s2;

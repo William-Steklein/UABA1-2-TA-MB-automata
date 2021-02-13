@@ -4,6 +4,9 @@
 #include <vector>
 #include <map>
 #include <set>
+#include "json.hpp"
+
+using json = nlohmann::ordered_json;
 
 class DFA
 {
@@ -19,11 +22,16 @@ class DFA
 	std::set<char> alphabet;
 
  public:
-	DFA();
+	DFA() = default;
+	DFA(const std::string& json_filename);
 	~DFA();
 
 	/* Loads a DFA from a .json file */
 	bool load(const std::string& filename);
+	/* returns a json object containing the DFA */
+	json save() const;
+	/* prints the DFA in json format */
+	void print() const;
 	/* Clears the alphabet, states and transitions of the DFA */
 	void clear();
 
@@ -32,7 +40,7 @@ class DFA
 	/* Removes a symbol from the alphabet of the DFA */
 	void removeSymbol(char symbol);
 	/* Sets the alphabet to the characters in the string */
-	void setAlphabet(std::string new_alphabet);
+	void setAlphabet(const std::string& new_alphabet);
 	void clearAlphabet();
 
 	void addState(const std::string& name, bool is_accepting);

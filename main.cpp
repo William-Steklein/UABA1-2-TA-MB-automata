@@ -5,7 +5,7 @@
 #include "DFA.h"
 #include "json.hpp"
 
-using json = nlohmann::json;
+using json = nlohmann::ordered_json;
 
 int main(){
 //	DFA dfa;
@@ -29,11 +29,15 @@ int main(){
 //	std::cout << std::setw(4) << j2 << std::endl;
 
 
-	DFA dfa;
-//	dfa.load("DFA2.json");
+//	DFA dfa{"DFA2.json"};
+//
+//	std::cout << std::boolalpha << dfa.accepts("0010110100")
+//	<< std::endl << dfa.accepts("0001") << std::endl;
+//
+//	dfa.print();
 
-	std::cout << std::boolalpha << dfa.accepts("0010110100")
-	<< std::endl << dfa.accepts("0001") << std::endl;
+	DFA dfa("DFA2.json");
+	dfa.print();
 
 	return 0;
 }
