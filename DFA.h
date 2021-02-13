@@ -1,17 +1,9 @@
 #ifndef TA_DFA_DFA_H
 #define TA_DFA_DFA_H
-#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
-#include <unordered_set>
-
-/* TODO
- *
- * thinking about how I am going to design this program
- *
- * Todot function/method for debugging automatons
- * */
+#include <set>
 
 class DFA
 {
@@ -22,24 +14,34 @@ class DFA
 		std::map<char, State*> transitions;
 		bool accepting = false;
 	};
-
 	std::map<std::string, State*> states;
 	State* start_state = nullptr;
-	std::unordered_set<char> alphabet;
+	std::set<char> alphabet;
 
  public:
 	DFA();
 	~DFA();
 
+	/* Loads a DFA from a .json file */
+	bool load(const std::string& filename);
+	/* Clears the alphabet, states and transitions of the DFA */
+	void clear();
+
+	/* Adds a symbol to the alphabet of the DFA */
 	void addSymbol(char new_symbol);
+	/* Removes a symbol from the alphabet of the DFA */
 	void removeSymbol(char symbol);
+	/* Sets the alphabet to the characters in the string */
 	void setAlphabet(std::string new_alphabet);
 	void clearAlphabet();
 
 	void addState(const std::string& name, bool is_accepting);
+	bool removeState(const std::string& name);
+	/* Sets a state as the start of the DFA, can only have one startstate */
 	bool setStartState(const std::string& new_start_state_name);
 	bool addTransition(const std::string& s1_name, const std::string& s2_name, char a);
 
+	/* Checks if the given sequence of symbols ends at an accepting state */
 	bool accepts(const std::string& string_w) const;
 
  private:
