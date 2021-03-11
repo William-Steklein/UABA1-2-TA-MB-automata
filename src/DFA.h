@@ -1,31 +1,35 @@
-#ifndef TA_DFA_DFA_H
-#define TA_DFA_DFA_H
+#ifndef TA_AUTOMATA_DFA_H
+#define TA_AUTOMATA_DFA_H
+
 #include <string>
 #include <vector>
 #include <map>
 #include <set>
 #include "json.hpp"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <graphviz/gvc.h>
 
-using json = nlohmann::ordered_json;
-//using json = nlohmann::json;
+//using json = nlohmann::ordered_json;
+using json = nlohmann::json;
 
-class DFA
-{
- private:
-	struct State
-	{
-		std::string name;
-		std::map<char, State*> transitions;
-		bool accepting = false;
+class DFA {
+private:
+	struct State {
+	  std::string name;
+	  std::map<char, State*> transitions;
+	  bool accepting = false;
 	};
 	std::map<std::string, State*> states;
 	State* start_state = nullptr;
 	std::set<char> alphabet;
 
- public:
-	DFA()
-	{
-	};
+	int id;
+	static int nextID;
+
+public:
+	DFA();
 	DFA(const std::string& json_filename);
 	~DFA();
 
@@ -55,12 +59,17 @@ class DFA
 	/* Checks if the given sequence of symbols ends at an accepting state */
 	bool accepts(const std::string& string_w) const;
 
+	// todo implement this
+	bool checkIntegrity() const;
+
+	int getID() const;
+
 	std::string genDOT() const;
 	bool genImage() const;
 
- private:
+private:
 	bool isSymbolInAlphabet(char a) const;
 	State* getState(const std::string& name) const;
 };
 
-#endif //TA_DFA_DFA_H
+#endif //TA_AUTOMATA_DFA_H

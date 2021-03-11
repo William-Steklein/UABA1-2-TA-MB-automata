@@ -1,18 +1,18 @@
-#include <fstream>
-#include <iostream>
-#include <iomanip>
 #include "DFA.h"
-#include "json.hpp"
 
-#include <graphviz/gvc.h>
-
-using json = nlohmann::ordered_json;
-//using json = nlohmann::json;
+//using json = nlohmann::ordered_json;
+using json = nlohmann::json;
 
 const std::string DOT_IMAGES_PATH = "../DOT_images/";
+int DFA::nextID = 0;
+
+DFA::DFA() {
+	id = nextID++;
+}
 
 DFA::DFA(const std::string& json_filename)
 {
+	id = nextID++;
 	load(json_filename);
 }
 
@@ -251,6 +251,11 @@ DFA::State* DFA::getState(const std::string& name) const
 	return nullptr;
 }
 
+int DFA::getID() const
+{
+	return id;
+}
+
 std::string DFA::genDOT() const
 {
 	std::string dot;
@@ -287,7 +292,7 @@ std::string DFA::genDOT() const
 
 bool DFA::genImage() const
 {
-	std::string path = DOT_IMAGES_PATH + "automata.dot";
+	std::string path = DOT_IMAGES_PATH + std::to_string(id) + ".dot";
 
 	std::ofstream file(path);
 	std::string my_string = genDOT();
@@ -301,7 +306,8 @@ bool DFA::genImage() const
 	fp = fopen((path).c_str(), "r");
 	g = agread(fp, nullptr);
 	gvLayout(gvc, g, "dot");
-	gvRender(gvc, g, "png", fopen((DOT_IMAGES_PATH + "image.png").c_str(), "w"));
+	gvRender(gvc, g, "png", fopen((DOT_IMAGES_PATH + std::to_string(id) + "_image.png").c_str(),
+			"w"));
 	gvFreeLayout(gvc, g);
 	agclose(g);
 
