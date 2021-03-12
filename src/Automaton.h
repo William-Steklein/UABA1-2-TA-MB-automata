@@ -32,8 +32,8 @@ protected:
 	bool loadBaseComponents(const json& automaton_json);
 
 public:
-	void addSymbol(char new_symbol);
-	void removeSymbol(char symbol);
+	bool addSymbol(char new_symbol);
+	bool removeSymbol(char symbol);
 	/* Sets the alphabet to the characters in the string */
 	void setAlphabet(const std::string& new_alphabet);
 	void clearAlphabet();
@@ -59,6 +59,12 @@ public:
 	/* Clears the alphabet, states and transitions */
 	virtual void clear() = 0;
 
+	/* Gives information about the automaton
+	 * no_of_states
+	 * no_of_transitions[symbol]
+	 * degree[i] = gives number of states that has i transitions
+	 * */
+	virtual void printStats() const = 0;
 	/* Checks if the automaton is legal */
 	virtual bool checkLegality() const = 0;
 	virtual std::string genDOT() const = 0;

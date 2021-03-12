@@ -39,6 +39,7 @@ public:
 	/* state elimination */
 	RE toRE();
 
+	void printStats() const override;
 	bool checkLegality() const override;
 	std::string genDOT() const override;
 

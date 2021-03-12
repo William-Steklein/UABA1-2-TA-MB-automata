@@ -28,6 +28,8 @@ public:
 	bool load(const std::string& filename) override;
 	json save() const override;
 
+	bool setEpsilon(char new_epsilon);
+	char getEpsilon() const;
 	void addState(const std::string& name, bool is_accepting) override;
 	bool removeState(const std::string& name) override;
 	bool setStartState(const std::string& new_start_state_name) override;
@@ -44,6 +46,7 @@ public:
 	NFA toNFA(); // new algorithm
 	RE toRE(); // finished
 
+	void printStats() const override;
 	bool checkLegality() const override;
 	std::string genDOT() const override;
 

@@ -9,7 +9,7 @@ NFA::NFA() : Automaton()
 
 NFA::NFA(const std::string& json_filename) : Automaton()
 {
-	load(json_filename);
+	NFA::load(json_filename);
 }
 
 NFA::~NFA()
@@ -203,10 +203,6 @@ bool NFA::accepts(const std::string& string_w) const
 		new_current_states.clear();
 	}
 
-	// todo: check if this works XD
-	// sad it doesn't work :(
-//	return std::any_of(current_states.begin(), current_states.end(), [](const State& state) {return state.accepting;});
-
 	for (const auto& current_state : current_states)
 	{
 		if (current_state->accepting)
@@ -243,6 +239,40 @@ RE NFA::toRE()
 	return toDFA().toRE();
 }
 
+void NFA::printStats() const
+{
+	std::cout << "no_of_states=" << states.size() << std::endl;
+
+	for (const auto& symbol : alphabet)
+	{
+		int no_of_transitions = 0;
+		for (const auto& state : states)
+		{
+			no_of_transitions += state.second->transitions[symbol].size();
+		}
+		std::cout << "no_of_transitions[" << symbol << "]=" << no_of_transitions << std::endl;
+	}
+
+	std::map<int, int> degrees;
+
+	for (const auto& state : states)
+	{
+		int degree = 0;
+		for (const auto& symbol : alphabet)
+		{
+			degree += state.second->transitions[symbol].size();
+		}
+		if (!degrees[degree])
+			degrees[degree] = 1;
+		else
+			degrees[degree]++;
+	}
+
+	for (const auto& degree : degrees)
+	{
+		std::cout << "degree[" << degree.first << "]=" << degree.second << std::endl;
+	}
+}
 
 bool NFA::checkLegality() const
 {

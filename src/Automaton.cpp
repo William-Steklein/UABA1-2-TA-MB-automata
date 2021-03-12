@@ -64,14 +64,26 @@ bool Automaton::loadBaseComponents(const json& automaton_json)
 	return true;
 }
 
-void Automaton::addSymbol(char new_symbol)
+bool Automaton::addSymbol(char new_symbol)
 {
+	if (alphabet.find(new_symbol) != alphabet.end())
+	{
+		std::cerr << "Error: Symbol '" << new_symbol << "' is already in the alphabet" << std::endl;
+		return false;
+	}
 	alphabet.insert(new_symbol);
+	return true;
 }
 
-void Automaton::removeSymbol(char symbol)
+bool Automaton::removeSymbol(char symbol)
 {
+	if (alphabet.find(symbol) == alphabet.end())
+	{
+		std::cerr << "Error: Couldn't remove symbol '" << symbol << "' from the alphabet" << std::endl;
+		return false;
+	}
 	alphabet.erase(symbol);
+	return true;
 }
 
 void Automaton::setAlphabet(const std::string& new_alphabet)

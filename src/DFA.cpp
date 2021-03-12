@@ -9,7 +9,7 @@ DFA::DFA() : Automaton()
 
 DFA::DFA(const std::string& json_filename) : Automaton()
 {
-	load(json_filename);
+	DFA::load(json_filename);
 }
 
 DFA::~DFA()
@@ -71,7 +71,7 @@ json DFA::save() const
 	return DFA_json;
 }
 
-void DFA::addState(const std::string& name, bool is_accepting = false)
+void DFA::addState(const std::string& name, bool is_accepting)
 {
 	State* new_state = new State;
 	new_state->name = name;
@@ -208,6 +208,38 @@ ENFA DFA::toENFA()
 RE DFA::toRE()
 {
 	return RE();
+}
+
+void DFA::printStats() const
+{
+	std::cout << "no_of_states=" << states.size() << std::endl;
+
+	for (const auto& symbol : alphabet)
+	{
+		int no_of_transitions = 0;
+		for (const auto& state : states)
+		{
+			if (state.second->transitions[symbol])
+				no_of_transitions++;
+		}
+		std::cout << "no_of_transitions[" << symbol << "]=" << no_of_transitions << std::endl;
+	}
+
+	std::map<int, int> degrees;
+
+	for (const auto& state : states)
+	{
+		int degree = state.second->transitions.size();
+		if (!degrees[degree])
+			degrees[degree] = 1;
+		else
+			degrees[degree]++;
+	}
+
+	for (const auto& degree : degrees)
+	{
+		std::cout << "degree[" << degree.first << "]=" << degree.second << std::endl;
+	}
 }
 
 bool DFA::checkLegality() const

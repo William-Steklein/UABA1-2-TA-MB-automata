@@ -42,6 +42,7 @@ public:
 	ENFA toENFA(); // simple conversion
 	RE toRE(); // finished
 
+	void printStats() const override;
 	bool checkLegality() const override;
 	std::string genDOT() const override;
 

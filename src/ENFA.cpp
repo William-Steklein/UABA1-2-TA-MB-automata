@@ -9,7 +9,7 @@ ENFA::ENFA() : Automaton()
 
 ENFA::ENFA(const std::string& json_filename) : Automaton()
 {
-	load(json_filename);
+	ENFA::load(json_filename);
 }
 
 ENFA::~ENFA()
@@ -35,7 +35,8 @@ bool ENFA::load(const std::string& filename)
 		return false;
 	}
 
-	epsilon = ENFA_json["eps"].get<std::string>()[0];
+	if (!setEpsilon(ENFA_json["eps"].get<std::string>()[0]))
+		return false;
 
 	loadBaseComponents(ENFA_json);
 
@@ -50,7 +51,7 @@ json ENFA::save() const
 
 	NFA_json["type"] = "NFA";
 
-	NFA_json["eps"] = epsilon;
+	NFA_json["eps"] = getEpsilon();
 
 	NFA_json["alphabet"] = json::array();
 	for (auto symbol : alphabet)
@@ -82,6 +83,22 @@ json ENFA::save() const
 	}
 
 	return NFA_json;
+}
+
+bool ENFA::setEpsilon(char new_epsilon)
+{
+	if (alphabet.find(new_epsilon) != alphabet.end())
+	{
+		std::cerr << "Error: Epsilon '" << new_epsilon << "' is already in the alphabet" << std::endl;
+		return false;
+	}
+	epsilon = new_epsilon;
+	return true;
+}
+
+char ENFA::getEpsilon() const
+{
+	return epsilon;
 }
 
 void ENFA::addState(const std::string& name, bool is_accepting)
@@ -128,7 +145,7 @@ bool ENFA::setStartState(const std::string& new_start_state_name)
 
 bool ENFA::addTransition(const std::string& s1_name, const std::string& s2_name, char a)
 {
-	if (a != epsilon)
+	if (a != getEpsilon())
 	{
 		if (!isSymbolInAlphabet(a))
 		{
@@ -148,7 +165,7 @@ bool ENFA::addTransition(const std::string& s1_name, const std::string& s2_name,
 
 bool ENFA::removeTransition(const std::string& s_name, char a)
 {
-	if (a != epsilon)
+	if (a != getEpsilon())
 	{
 		if (!isSymbolInAlphabet(a))
 		{
@@ -168,7 +185,7 @@ bool ENFA::removeTransition(const std::string& s_name, char a)
 
 bool ENFA::removeSpecificTransition(const std::string& s1_name, const std::string& s2_name, char a)
 {
-	if (a != epsilon)
+	if (a != getEpsilon())
 	{
 		if (!isSymbolInAlphabet(a))
 		{
@@ -207,7 +224,7 @@ bool ENFA::accepts(const std::string& string_w) const
 
 	for (char a : string_w)
 	{
-		if (a != epsilon)
+		if (a != getEpsilon())
 		{
 			if (!isSymbolInAlphabet(a))
 			{
@@ -218,10 +235,10 @@ bool ENFA::accepts(const std::string& string_w) const
 		// loops through all current states
 		for (const auto& current_state : current_states)
 		{
-			if (a != epsilon)
+			if (a != getEpsilon())
 			{
 				// adds all states from the epsilon transition to the current set
-				for (const auto& new_state : current_state->transitions[epsilon])
+				for (const auto& new_state : current_state->transitions[getEpsilon()])
 				{
 					current_states.insert(new_state);
 				}
@@ -276,6 +293,44 @@ RE ENFA::toRE()
 	return toDFA().toRE();
 }
 
+void ENFA::printStats() const
+{
+	std::cout << "no_of_states=" << states.size() << std::endl;
+
+	std::set<char> full_alphabet = alphabet;
+	full_alphabet.insert(getEpsilon());
+
+	for (const auto& symbol : full_alphabet)
+	{
+		int no_of_transitions = 0;
+		for (const auto& state : states)
+		{
+			no_of_transitions += state.second->transitions[symbol].size();
+		}
+		std::cout << "no_of_transitions[" << symbol << "]=" << no_of_transitions << std::endl;
+	}
+
+	std::map<int, int> degrees;
+
+	for (const auto& state : states)
+	{
+		int degree = 0;
+		for (const auto& symbol : full_alphabet)
+		{
+			degree += state.second->transitions[symbol].size();
+		}
+		if (!degrees[degree])
+			degrees[degree] = 1;
+		else
+			degrees[degree]++;
+	}
+
+	for (const auto& degree : degrees)
+	{
+		std::cout << "degree[" << degree.first << "]=" << degree.second << std::endl;
+	}
+}
+
 bool ENFA::checkLegality() const
 {
 	bool legal = true;
@@ -288,7 +343,7 @@ bool ENFA::checkLegality() const
 	}
 
 	// check if epsilon is not in the alphabet set
-	if (alphabet.find(epsilon) != alphabet.end())
+	if (alphabet.find(getEpsilon()) != alphabet.end())
 		legal = false;
 
 	return legal;
