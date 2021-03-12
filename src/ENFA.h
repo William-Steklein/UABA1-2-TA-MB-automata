@@ -16,6 +16,7 @@ class ENFA : public Automaton
 		bool accepting = false;
 	};
 	std::map<std::string, State*> states;
+
 	State* start_state = nullptr;
 	char epsilon;
 

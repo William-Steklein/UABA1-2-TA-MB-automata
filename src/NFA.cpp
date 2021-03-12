@@ -91,19 +91,12 @@ bool NFA::removeState(const std::string& name)
 	if (state_to_delete == start_state)
 		start_state = nullptr;
 
-	// todo: test if state2 is changed
-	// remove state pointer from other transitions
+	// deletes the state pointer from the transitions
 	for (const auto& state : states)
 	{
-		for (const auto& transition : state.second->transitions)
+		for (auto& transitions : state.second->transitions)
 		{
-			for (auto state2 : transition.second)
-			{
-				if (state2 == state_to_delete)
-				{
-					state2 = nullptr;
-				}
-			}
+			transitions.second.erase(state_to_delete);
 		}
 	}
 
@@ -132,11 +125,6 @@ bool NFA::addTransition(const std::string& s1_name, const std::string& s2_name, 
 	State* s2 = getState(s2_name);
 	if (!s1 || !s2)
 		return false;
-
-	if (s1->transitions.find(a) != s1->transitions.end())
-	{
-		std::cout << "Overwriting transition δ(" << s1->name << ", " << a << ")" << std::endl;
-	}
 
 	s1->transitions[a].insert(s2);
 
@@ -197,15 +185,19 @@ bool NFA::accepts(const std::string& string_w) const
 		if (!isSymbolInAlphabet(a))
 			return false;
 
-		// loop through all current states
+		// loops through all current states
 		for (const auto& current_state : current_states)
 		{
-			// add all states from the transition to the new set
+			// adds all states from the transition to the new set
 			for (const auto& new_state : current_state->transitions[a])
 			{
-				new_current_states.insert(new_state);
+				if (new_state != nullptr)
+					new_current_states.insert(new_state);
 			}
 		}
+
+		if (new_current_states.empty())
+			return false;
 
 		current_states = new_current_states;
 		new_current_states.clear();
@@ -254,7 +246,7 @@ RE NFA::toRE()
 
 bool NFA::checkLegality() const
 {
-	// check if it has a start state
+	// checks if it has a start state
 	if (!start_state)
 	{
 		std::cerr << "Error: DFA " << getID() << " has no start state" << std::endl;

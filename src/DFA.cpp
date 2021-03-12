@@ -88,7 +88,7 @@ bool DFA::removeState(const std::string& name)
 	if (state_to_delete == start_state)
 		start_state = nullptr;
 
-	// remove state pointer from other transitions
+	// removes state pointer from other transitions
 	for (const auto& state : states)
 	{
 		for (auto& transition : state.second->transitions)
@@ -166,7 +166,7 @@ bool DFA::accepts(const std::string& string_w) const
 		if (!isSymbolInAlphabet(a))
 			return false;
 
-		// check if there is a transition
+		// checks if there is a transition
 		if (current_state->transitions[a] == nullptr)
 		{
 			std::cerr << "Error: δ(" << current_state->name << ", " << a << ") has no output" << std::endl;
@@ -214,14 +214,14 @@ bool DFA::checkLegality() const
 {
 	bool legal = true;
 
-	// check if it has a start state
+	// checks if it has a start state
 	if (!start_state)
 	{
 		std::cerr << "Error: DFA " << getID() << " has no start state" << std::endl;
 		legal = false;
 	}
 
-	// check if every state has a transition with every symbol
+	// checks if every state has a transition with every symbol
 	for (auto state : states)
 	{
 		for (auto c : alphabet)
