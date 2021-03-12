@@ -27,16 +27,6 @@ json ENFA::save() const
 	return json();
 }
 
-void ENFA::print() const
-{
-
-}
-
-void ENFA::clear()
-{
-
-}
-
 void ENFA::addState(const std::string& name, bool is_accepting)
 {
 
@@ -62,9 +52,19 @@ bool ENFA::removeTransition(const std::string& s1_name, char a)
 	return false;
 }
 
+bool ENFA::removeSpecificTransition(const std::string& s1_name, const std::string& s2_name, char a)
+{
+	return false;
+}
+
 bool ENFA::accepts(const std::string& string_w) const
 {
 	return false;
+}
+
+void ENFA::clear()
+{
+
 }
 
 DFA ENFA::toDFA()

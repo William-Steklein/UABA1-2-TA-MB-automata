@@ -20,24 +20,7 @@ DFA::~DFA()
 
 bool DFA::load(const std::string& filename)
 {
-	// file input
-	std::ifstream input(filename);
-
-	if (!input.good())
-	{
-		std::cerr << "Error: couldn't open " << filename << std::endl;
-		return false;
-	}
-
-	json DFA_json;
-	input >> DFA_json;
-
-	if (!(DFA_json.contains("type") && DFA_json.contains("alphabet")
-		&& DFA_json.contains("states") && DFA_json.contains("transitions")))
-	{
-		std::cerr << "Error: " << filename << " has an invalid format" << std::endl;
-		return false;
-	}
+	json DFA_json = loadStart(filename);
 
 	if (DFA_json["type"] != "DFA")
 	{
@@ -46,23 +29,7 @@ bool DFA::load(const std::string& filename)
 		return false;
 	}
 
-	for (const auto& symbol : DFA_json["alphabet"])
-	{
-		addSymbol(symbol.get<std::string>()[0]);
-	}
-
-	for (const auto& state : DFA_json["states"])
-	{
-		addState(state["name"].get<std::string>(), state["accepting"].get<bool>());
-		if (state["starting"].get<bool>())
-			setStartState(state["name"].get<std::string>());
-	}
-
-	for (const auto& transition : DFA_json["transitions"])
-	{
-		addTransition(transition["from"].get<std::string>(), transition["to"].get<std::string>(),
-			transition["input"].get<std::string>()[0]);
-	}
+	loadBaseComponents(DFA_json);
 
 	checkLegality();
 
@@ -71,13 +38,13 @@ bool DFA::load(const std::string& filename)
 
 json DFA::save() const
 {
-	json json_DFA;
+	json DFA_json;
 
-	json_DFA["type"] = "DFA";
+	DFA_json["type"] = "DFA";
 
-	json_DFA["alphabet"] = json::array();
+	DFA_json["alphabet"] = json::array();
 	for (auto symbol : alphabet)
-		json_DFA["alphabet"].push_back(std::string(1, symbol));
+		DFA_json["alphabet"].push_back(std::string(1, symbol));
 
 	for (const auto& state : states)
 	{
@@ -85,7 +52,7 @@ json DFA::save() const
 		if (state.second == start_state)
 			is_start = true;
 
-		json_DFA["states"].push_back({
+		DFA_json["states"].push_back({
 			{ "name", state.first },
 			{ "starting", is_start },
 			{ "accepting", state.second->accepting }
@@ -93,7 +60,7 @@ json DFA::save() const
 
 		for (const auto& transition : state.second->transitions)
 		{
-			json_DFA["transitions"].push_back({
+			DFA_json["transitions"].push_back({
 				{ "from", state.first },
 				{ "to", transition.second->name },
 				{ "input", std::string(1, transition.first) }
@@ -101,25 +68,7 @@ json DFA::save() const
 		}
 	}
 
-	return json_DFA;
-}
-
-void DFA::print() const
-{
-	std::cout << std::setw(4) << save() << std::endl;
-}
-
-void DFA::clear()
-{
-	// alphabet
-	clearAlphabet();
-
-	// states
-	for (const auto& state : states)
-		delete state.second;
-
-	states.clear();
-	start_state = nullptr;
+	return DFA_json;
 }
 
 void DFA::addState(const std::string& name, bool is_accepting = false)
@@ -215,10 +164,7 @@ bool DFA::accepts(const std::string& string_w) const
 	for (char a : string_w)
 	{
 		if (!isSymbolInAlphabet(a))
-		{
-			std::cerr << "Error: symbol " << a << " is not in the alphabet" << std::endl;
 			return false;
-		}
 
 		// check if there is a transition
 		if (current_state->transitions[a] == nullptr)
@@ -234,6 +180,19 @@ bool DFA::accepts(const std::string& string_w) const
 		return true;
 	else
 		return false;
+}
+
+void DFA::clear()
+{
+	// alphabet
+	clearAlphabet();
+
+	// states
+	for (const auto& state : states)
+		delete state.second;
+
+	states.clear();
+	start_state = nullptr;
 }
 
 NFA DFA::toNFA()
@@ -254,7 +213,6 @@ RE DFA::toRE()
 bool DFA::checkLegality() const
 {
 	bool legal = true;
-	bool has_accepting_state = false;
 
 	// check if it has a start state
 	if (!start_state)
@@ -278,16 +236,6 @@ bool DFA::checkLegality() const
 	}
 
 	return legal;
-}
-
-DFA::State* DFA::getState(const std::string& name) const
-{
-	auto state = states.find(name);
-	if (state != states.end())
-		return state->second;
-
-	std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
-	return nullptr;
 }
 
 std::string DFA::genDOT() const
@@ -325,4 +273,14 @@ std::string DFA::genDOT() const
 	dot += "\n}";
 
 	return dot;
+}
+
+DFA::State* DFA::getState(const std::string& name) const
+{
+	auto state = states.find(name);
+	if (state != states.end())
+		return state->second;
+
+	std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
+	return nullptr;
 }

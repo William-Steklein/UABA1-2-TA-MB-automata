@@ -16,7 +16,6 @@ using json = nlohmann::json;
 // todo: check algorithms with testinput from tuyaux
 /*
  * todo
- * - implement NFA
  * - implement ENFA
  * - implement RE
  * - implement subset construction
@@ -27,6 +26,8 @@ using json = nlohmann::json;
  *
  * - put library source code in project
  * - check algorithms with testinput from tuyaux
+ * - change toDot(), so that if there are two arrows with the same origin and destination, it will make one arrow and
+ * add the symbols with a comma.
  *
  */
 
@@ -50,14 +51,20 @@ int main()
 	DFA dfa("../automata_json/DFA.json");
 	DFA dfa2("../automata_json/DFA2.json");
 	DFA dfa3("../automata_json/DFA3.json");
+	DFA dfa4("../automata_json/DFA4.json");
+	NFA nfa("../automata_json/NFA.json");
 
 	std::cout << dfa.checkLegality() << std::endl;
 	std::cout << dfa2.checkLegality() << std::endl;
 	std::cout << dfa3.checkLegality() << std::endl;
+	std::cout << dfa4.checkLegality() << std::endl;
+	std::cout << nfa.checkLegality() << std::endl;
 
 	dfa.genImage();
 	dfa2.genImage();
 	dfa3.genImage();
+	dfa4.genImage();
+	nfa.genImage();
 
 	return 0;
 }

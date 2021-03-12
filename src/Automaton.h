@@ -25,6 +25,12 @@ protected:
 
 	bool isSymbolInAlphabet(char a) const;
 
+	/* help function of load(), opens the json document and checks if
+	 * it contains "type", "alphabet", "states" and "transitions"*/
+	json loadStart(const std::string& filename) const;
+	/* help function of load(), loads the alphabet, states and transitions */
+	bool loadBaseComponents(const json& automaton_json);
+
 public:
 	void addSymbol(char new_symbol);
 	void removeSymbol(char symbol);
@@ -34,14 +40,13 @@ public:
 
 	int getID() const;
 
-	/* Loads a DFA from a .json file */
+	/* Loads an automaton from a .json file */
 	virtual bool load(const std::string& filename) = 0;
-	/* returns a json object containing the DFA */
+	/* returns a json object containing the automaton */
 	virtual json save() const = 0;
-	/* prints the DFA in json format */
-	virtual void print() const = 0;
-	/* Clears the alphabet, states and transitions of the DFA */
-	virtual void clear() = 0;
+	/* prints the automaton in json format */
+	void print() const;
+
 
 	virtual void addState(const std::string& name, bool is_accepting) = 0;
 	virtual bool removeState(const std::string& name) = 0;
@@ -51,6 +56,8 @@ public:
 	virtual bool removeTransition(const std::string& s1_name, char a) = 0;
 	/* Checks if the given sequence of symbols ends at an accepting state */
 	virtual bool accepts(const std::string& string_w) const = 0;
+	/* Clears the alphabet, states and transitions */
+	virtual void clear() = 0;
 
 	/* Checks if the automaton is legal */
 	virtual bool checkLegality() const = 0;

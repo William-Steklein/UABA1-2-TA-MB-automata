@@ -25,15 +25,17 @@ public:
 
 	bool load(const std::string& filename) override;
 	json save() const override;
-	void print() const override;
-	void clear() override;
 
 	void addState(const std::string& name, bool is_accepting) override;
 	bool removeState(const std::string& name) override;
 	bool setStartState(const std::string& new_start_state_name) override;
 	bool addTransition(const std::string& s1_name, const std::string& s2_name, char a) override;
-	bool removeTransition(const std::string& s1_name, char a) override;
+	/* removes all transitions from state s_name with symbol a */
+	bool removeTransition(const std::string& s_name, char a) override;
+	/* removes one specific transition */
+	bool removeSpecificTransition(const std::string& s1_name, const std::string& s2_name, char a);
 	bool accepts(const std::string& string_w) const override;
+	void clear() override;
 
 	/* Subset construction */
 	DFA toDFA();

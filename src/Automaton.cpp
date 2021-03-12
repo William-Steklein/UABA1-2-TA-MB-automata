@@ -16,6 +16,54 @@ bool Automaton::isSymbolInAlphabet(char a) const
 	return false;
 }
 
+json Automaton::loadStart(const std::string& filename) const
+{
+	// file input
+	std::ifstream input(filename);
+
+	if (!input.good())
+	{
+		std::cerr << "Error: couldn't open " << filename << std::endl;
+		return false;
+	}
+
+	json automaton_json;
+	input >> automaton_json;
+	input.close();
+
+	if (!(automaton_json.contains("type") && automaton_json.contains("alphabet")
+		&& automaton_json.contains("states") && automaton_json.contains("transitions")))
+	{
+		std::cerr << "Error: " << filename << " has an invalid format" << std::endl;
+		return false;
+	}
+
+	return automaton_json;
+}
+
+bool Automaton::loadBaseComponents(const json& automaton_json)
+{
+	for (const auto& symbol : automaton_json["alphabet"])
+	{
+		addSymbol(symbol.get<std::string>()[0]);
+	}
+
+	for (const auto& state : automaton_json["states"])
+	{
+		addState(state["name"].get<std::string>(), state["accepting"].get<bool>());
+		if (state["starting"].get<bool>())
+			setStartState(state["name"].get<std::string>());
+	}
+
+	for (const auto& transition : automaton_json["transitions"])
+	{
+		addTransition(transition["from"].get<std::string>(), transition["to"].get<std::string>(),
+			transition["input"].get<std::string>()[0]);
+	}
+
+	return true;
+}
+
 void Automaton::addSymbol(char new_symbol)
 {
 	alphabet.insert(new_symbol);
@@ -43,6 +91,11 @@ void Automaton::clearAlphabet()
 int Automaton::getID() const
 {
 	return ID;
+}
+
+void Automaton::print() const
+{
+	std::cout << std::setw(4) << save() << std::endl;
 }
 
 bool Automaton::genImage() const
