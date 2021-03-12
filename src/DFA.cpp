@@ -1,18 +1,14 @@
 #include "DFA.h"
+#include "NFA.h"
+#include "ENFA.h"
+#include "RE.h"
 
-//using json = nlohmann::ordered_json;
-using json = nlohmann::json;
-
-const std::string DOT_IMAGES_PATH = "../DOT_images/";
-int DFA::nextID = 0;
-
-DFA::DFA() {
-	id = nextID++;
+DFA::DFA() : Automaton()
+{
 }
 
-DFA::DFA(const std::string& json_filename)
+DFA::DFA(const std::string& json_filename) : Automaton()
 {
-	id = nextID++;
 	load(json_filename);
 }
 
@@ -37,7 +33,7 @@ bool DFA::load(const std::string& filename)
 	input >> DFA_json;
 
 	if (!(DFA_json.contains("type") && DFA_json.contains("alphabet")
-		  && DFA_json.contains("states") && DFA_json.contains("transitions")))
+		&& DFA_json.contains("states") && DFA_json.contains("transitions")))
 	{
 		std::cerr << "Error: " << filename << " has an invalid format" << std::endl;
 		return false;
@@ -64,9 +60,11 @@ bool DFA::load(const std::string& filename)
 
 	for (const auto& transition : DFA_json["transitions"])
 	{
-		addTransition(transition["from"].get<std::string>(), transition["to"].get<std::string>()
-		    , transition["input"].get<std::string>()[0]);
+		addTransition(transition["from"].get<std::string>(), transition["to"].get<std::string>(),
+			transition["input"].get<std::string>()[0]);
 	}
+
+	checkLegality();
 
 	return true;
 }
@@ -84,20 +82,21 @@ json DFA::save() const
 	for (const auto& state : states)
 	{
 		bool is_start = false;
-		if (state.second == start_state) is_start = true;
+		if (state.second == start_state)
+			is_start = true;
 
 		json_DFA["states"].push_back({
-			{"name", state.first},
-			{"starting", is_start},
-			{"accepting", state.second->accepting}
+			{ "name", state.first },
+			{ "starting", is_start },
+			{ "accepting", state.second->accepting }
 		});
 
 		for (const auto& transition : state.second->transitions)
 		{
 			json_DFA["transitions"].push_back({
-				{"from", state.first},
-				{"to", transition.second->name},
-				{"input", std::string(1, transition.first)}
+				{ "from", state.first },
+				{ "to", transition.second->name },
+				{ "input", std::string(1, transition.first) }
 			});
 		}
 	}
@@ -123,31 +122,7 @@ void DFA::clear()
 	start_state = nullptr;
 }
 
-void DFA::addSymbol(char new_symbol)
-{
-	alphabet.insert(new_symbol);
-}
-
-void DFA::removeSymbol(char symbol)
-{
-	alphabet.erase(symbol);
-}
-
-void DFA::setAlphabet(const std::string& new_alphabet)
-{
-	clearAlphabet();
-	for (char symbol : new_alphabet)
-	{
-		addSymbol(symbol);
-	}
-}
-
-void DFA::clearAlphabet()
-{
-	alphabet.clear();
-}
-
-void DFA::addState(const std::string& name, bool is_accepting)
+void DFA::addState(const std::string& name, bool is_accepting = false)
 {
 	State* new_state = new State;
 	new_state->name = name;
@@ -157,15 +132,27 @@ void DFA::addState(const std::string& name, bool is_accepting)
 
 bool DFA::removeState(const std::string& name)
 {
-	State* state = getState(name);
-	if (!state)
+	State* state_to_delete = getState(name);
+	if (!state_to_delete)
 		return false;
 
-	if (state == start_state)
+	if (state_to_delete == start_state)
 		start_state = nullptr;
 
+	// remove state pointer from other transitions
+	for (const auto& state : states)
+	{
+		for (auto& transition : state.second->transitions)
+		{
+			if (transition.second == state_to_delete)
+			{
+				transition.second = nullptr;
+			}
+		}
+	}
+
 	states.erase(name);
-	delete state;
+	delete state_to_delete;
 
 	return true;
 }
@@ -200,6 +187,21 @@ bool DFA::addTransition(const std::string& s1_name, const std::string& s2_name, 
 	return true;
 }
 
+bool DFA::removeTransition(const std::string& s_name, char a)
+{
+	if (!isSymbolInAlphabet(a))
+		return false;
+
+	State* s = getState(s_name);
+
+	if (!s)
+		return false;
+
+	s->transitions[a] = nullptr;
+
+	return true;
+}
+
 bool DFA::accepts(const std::string& string_w) const
 {
 	if (!start_state)
@@ -213,18 +215,19 @@ bool DFA::accepts(const std::string& string_w) const
 	for (char a : string_w)
 	{
 		if (!isSymbolInAlphabet(a))
+		{
+			std::cerr << "Error: symbol " << a << " is not in the alphabet" << std::endl;
 			return false;
-
-		auto it = current_state->transitions.find(a);
+		}
 
 		// check if there is a transition
-		if (it == current_state->transitions.end())
+		if (current_state->transitions[a] == nullptr)
 		{
 			std::cerr << "Error: δ(" << current_state->name << ", " << a << ") has no output" << std::endl;
 			return false;
 		}
 
-		current_state = it->second;
+		current_state = current_state->transitions[a];
 	}
 
 	if (current_state->accepting)
@@ -233,12 +236,48 @@ bool DFA::accepts(const std::string& string_w) const
 		return false;
 }
 
-bool DFA::isSymbolInAlphabet(char a) const
+NFA DFA::toNFA()
 {
-	if (alphabet.find(a) != alphabet.end())
-		return true;
-	std::cerr << "Error: symbol " << a << " is not in alphabet" << std::endl;
-	return false;
+	return NFA();
+}
+
+ENFA DFA::toENFA()
+{
+	return ENFA();
+}
+
+RE DFA::toRE()
+{
+	return RE();
+}
+
+bool DFA::checkLegality() const
+{
+	bool legal = true;
+	bool has_accepting_state = false;
+
+	// check if it has a start state
+	if (!start_state)
+	{
+		std::cerr << "Error: DFA " << getID() << " has no start state" << std::endl;
+		legal = false;
+	}
+
+	// check if every state has a transition with every symbol
+	for (auto state : states)
+	{
+		for (auto c : alphabet)
+		{
+			if (state.second->transitions[c] == nullptr)
+			{
+				std::cerr << "Error: DFA " << getID() << " has no transition from state " << state.first <<
+						  " with symbol " << c << std::endl;
+				legal = false;
+			}
+		}
+	}
+
+	return legal;
 }
 
 DFA::State* DFA::getState(const std::string& name) const
@@ -249,11 +288,6 @@ DFA::State* DFA::getState(const std::string& name) const
 
 	std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
 	return nullptr;
-}
-
-int DFA::getID() const
-{
-	return id;
 }
 
 std::string DFA::genDOT() const
@@ -281,35 +315,14 @@ std::string DFA::genDOT() const
 	{
 		for (const auto& transition : state.second->transitions)
 		{
-			dot += "\n\t" + state.first + " -> " + transition.second->name;
-			dot += " [ label = \"" + std::string(1, transition.first) + "\" ];";
+			if (transition.second)
+			{
+				dot += "\n\t" + state.first + " -> " + transition.second->name;
+				dot += " [ label = \"" + std::string(1, transition.first) + "\" ];";
+			}
 		}
 	}
 	dot += "\n}";
 
 	return dot;
-}
-
-bool DFA::genImage() const
-{
-	std::string path = DOT_IMAGES_PATH + std::to_string(id) + ".dot";
-
-	std::ofstream file(path);
-	std::string my_string = genDOT();
-	file << my_string;
-	file.close();
-
-	GVC_t* gvc;
-	Agraph_t* g;
-	FILE* fp;
-	gvc = gvContext();
-	fp = fopen((path).c_str(), "r");
-	g = agread(fp, nullptr);
-	gvLayout(gvc, g, "dot");
-	gvRender(gvc, g, "png", fopen((DOT_IMAGES_PATH + std::to_string(id) + "_image.png").c_str(),
-			"w"));
-	gvFreeLayout(gvc, g);
-	agclose(g);
-
-	return (gvFreeContext(gvc));
 }

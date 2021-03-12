@@ -1,27 +1,27 @@
-#ifndef TA_AUTOMATA_DFA_H
-#define TA_AUTOMATA_DFA_H
+#ifndef TA_AUTOMATA_SRC_ENFA_H
+#define TA_AUTOMATA_SRC_ENFA_H
 
 #include "Automaton.h"
 
+class DFA;
 class NFA;
-class ENFA;
 class RE;
 
-class DFA : public Automaton
+class ENFA : public Automaton
 {
 	struct State
 	{
 		std::string name;
-		std::map<char, State*> transitions;
+		std::map<char, std::set<State*>> transitions;
 		bool accepting = false;
 	};
 	std::map<std::string, State*> states;
 	State* start_state = nullptr;
 
 public:
-	DFA();
-	DFA(const std::string& json_filename);
-	~DFA();
+	ENFA();
+	ENFA(const std::string& json_filename);
+	~ENFA();
 
 	bool load(const std::string& filename) override;
 	json save() const override;
@@ -35,10 +35,10 @@ public:
 	bool removeTransition(const std::string& s1_name, char a) override;
 	bool accepts(const std::string& string_w) const override;
 
-	NFA toNFA(); // simple conversion
-	ENFA toENFA(); // simple conversion
-	/* state elimination */
-	RE toRE();
+	/* Modified subset construction */
+	DFA toDFA();
+	NFA toNFA(); // new algorithm
+	RE toRE(); // finished
 
 	bool checkLegality() const override;
 	std::string genDOT() const override;
@@ -47,4 +47,4 @@ private:
 	State* getState(const std::string& name) const;
 };
 
-#endif //TA_AUTOMATA_DFA_H
+#endif //TA_AUTOMATA_SRC_ENFA_H
