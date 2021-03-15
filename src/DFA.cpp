@@ -81,7 +81,7 @@ void DFA::addState(const std::string& name, bool is_accepting)
 
 bool DFA::removeState(const std::string& name)
 {
-	State* state_to_delete = getState(name);
+	State* state_to_delete = getState(name, true);
 	if (!state_to_delete)
 		return false;
 
@@ -108,7 +108,7 @@ bool DFA::removeState(const std::string& name)
 
 bool DFA::setStartState(const std::string& new_start_state_name)
 {
-	State* new_start_state = getState(new_start_state_name);
+	State* new_start_state = getState(new_start_state_name, true);
 	if (!new_start_state)
 		return false;
 
@@ -116,13 +116,25 @@ bool DFA::setStartState(const std::string& new_start_state_name)
 	return true;
 }
 
+bool DFA::isStateAccepting(const std::string& s_name) const
+{
+	return getState(s_name, true)->accepting;
+}
+
+bool DFA::stateExists(const std::string& s_name) const
+{
+	if (getState(s_name, false))
+		return true;
+	return false;
+}
+
 bool DFA::addTransition(const std::string& s1_name, const std::string& s2_name, char a)
 {
 	if (!isSymbolInAlphabet(a))
 		return false;
 
-	State* s1 = getState(s1_name);
-	State* s2 = getState(s2_name);
+	State* s1 = getState(s1_name, true);
+	State* s2 = getState(s2_name, true);
 	if (!s1 || !s2)
 		return false;
 
@@ -141,7 +153,7 @@ bool DFA::removeTransition(const std::string& s_name, char a)
 	if (!isSymbolInAlphabet(a))
 		return false;
 
-	State* s = getState(s_name);
+	State* s = getState(s_name, true);
 
 	if (!s)
 		return false;
@@ -149,6 +161,11 @@ bool DFA::removeTransition(const std::string& s_name, char a)
 	s->transitions[a] = nullptr;
 
 	return true;
+}
+
+std::set<std::string> DFA::transitionFunction(const std::string& s_name, char a) const
+{
+	return {getState(s_name, true)->transitions[a]->name};
 }
 
 bool DFA::accepts(const std::string& string_w) const
@@ -197,6 +214,7 @@ void DFA::clear()
 
 NFA DFA::toNFA()
 {
+	for ()
 	return NFA();
 }
 
@@ -284,12 +302,12 @@ std::string DFA::genDOT() const
 	for (const auto& state : states)
 	{
 		if (state.second->accepting)
-			dot += " " + state.first;
+			dot += " \"" + state.first + "\"";
 	}
 
 	dot += "\n\tnode [shape = circle];\n";
 
-	dot += "\n\tstart -> " + start_state->name;
+	dot += "\n\tstart -> \"" + start_state->name + "\"";
 
 	for (const auto& state : states)
 	{
@@ -297,7 +315,7 @@ std::string DFA::genDOT() const
 		{
 			if (transition.second)
 			{
-				dot += "\n\t" + state.first + " -> " + transition.second->name;
+				dot += "\n\t\"" + state.first + "\"" + " -> \"" + transition.second->name + "\"";
 				dot += " [ label = \"" + std::string(1, transition.first) + "\" ];";
 			}
 		}
@@ -307,12 +325,13 @@ std::string DFA::genDOT() const
 	return dot;
 }
 
-DFA::State* DFA::getState(const std::string& name) const
+DFA::State* DFA::getState(const std::string& name, bool error_output) const
 {
 	auto state = states.find(name);
 	if (state != states.end())
 		return state->second;
 
-	std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
+	if (error_output)
+		std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
 	return nullptr;
 }

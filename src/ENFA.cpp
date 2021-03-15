@@ -143,6 +143,18 @@ bool ENFA::setStartState(const std::string& new_start_state_name)
 	return true;
 }
 
+bool ENFA::isStateAccepting(const std::string& s_name) const
+{
+	return getState(s_name)->accepting;
+}
+
+bool ENFA::stateExists(const std::string& s_name) const
+{
+	if (getState(s_name))
+		return true;
+	return false;
+}
+
 bool ENFA::addTransition(const std::string& s1_name, const std::string& s2_name, char a)
 {
 	if (a != getEpsilon())
@@ -210,6 +222,16 @@ bool ENFA::removeSpecificTransition(const std::string& s1_name, const std::strin
 	return true;
 }
 
+std::set<std::string> ENFA::transitionFunction(const std::string& s_name, char a) const
+{
+	std::set<std::string> result;
+	for (const auto& state : getState(s_name)->transitions[a])
+	{
+		result.insert(state->name);
+	}
+	return result;
+}
+
 bool ENFA::accepts(const std::string& string_w) const
 {
 	if (!start_state)
@@ -220,6 +242,7 @@ bool ENFA::accepts(const std::string& string_w) const
 
 	std::set<State*> current_states;
 	std::set<State*> new_current_states;
+	bool new_states_added;
 	current_states.insert(start_state);
 
 	for (char a : string_w)
@@ -235,18 +258,24 @@ bool ENFA::accepts(const std::string& string_w) const
 		// loops through all current states
 		for (const auto& current_state : current_states)
 		{
-			if (a != getEpsilon())
+			new_states_added = true;
+			while (new_states_added)
 			{
+				new_states_added = false;
 				// adds all states from the epsilon transition to the current set
 				for (const auto& new_state : current_state->transitions[getEpsilon()])
 				{
 					current_states.insert(new_state);
+					new_states_added = true;
 				}
 			}
-			// adds all states from the transition to the new set
-			for (const auto& new_state : current_state->transitions[a])
+			if (a != getEpsilon())
 			{
-				new_current_states.insert(new_state);
+				// adds all states from the transition to the new set
+				for (const auto& new_state : current_state->transitions[a])
+				{
+					new_current_states.insert(new_state);
+				}
 			}
 		}
 

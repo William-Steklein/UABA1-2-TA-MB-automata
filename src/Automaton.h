@@ -47,13 +47,15 @@ public:
 	/* prints the automaton in json format */
 	void print() const;
 
-
 	virtual void addState(const std::string& name, bool is_accepting) = 0;
 	virtual bool removeState(const std::string& name) = 0;
 	/* Sets a state as the start of the automaton, can only have one startstate */
 	virtual bool setStartState(const std::string& new_start_state_name) = 0;
+	virtual bool isStateAccepting(const std::string& s_name) const = 0;
+	virtual bool stateExists(const std::string& s_name) const = 0;
 	virtual bool addTransition(const std::string& s1_name, const std::string& s2_name, char a) = 0;
 	virtual bool removeTransition(const std::string& s1_name, char a) = 0;
+	virtual std::set<std::string> transitionFunction(const std::string& s_name, char a) const = 0;
 	/* Checks if the given sequence of symbols ends at an accepting state */
 	virtual bool accepts(const std::string& string_w) const = 0;
 	/* Clears the alphabet, states and transitions */

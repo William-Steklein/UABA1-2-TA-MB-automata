@@ -33,11 +33,14 @@ public:
 	void addState(const std::string& name, bool is_accepting) override;
 	bool removeState(const std::string& name) override;
 	bool setStartState(const std::string& new_start_state_name) override;
+	bool isStateAccepting(const std::string& s_name) const override;
+	bool stateExists(const std::string& s_name) const override;
 	bool addTransition(const std::string& s1_name, const std::string& s2_name, char a) override;
 	/* removes all transitions from state s_name with symbol a */
 	bool removeTransition(const std::string& s_name, char a) override;
 	/* removes one specific transition */
 	bool removeSpecificTransition(const std::string& s1_name, const std::string& s2_name, char a);
+	std::set<std::string> transitionFunction(const std::string& s_name, char a) const override;
 	bool accepts(const std::string& string_w) const override;
 	void clear() override;
 

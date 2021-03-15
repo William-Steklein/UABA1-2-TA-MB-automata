@@ -116,6 +116,18 @@ bool NFA::setStartState(const std::string& new_start_state_name)
 	return true;
 }
 
+bool NFA::isStateAccepting(const std::string& s_name) const
+{
+	return getState(s_name)->accepting;
+}
+
+bool NFA::stateExists(const std::string& s_name) const
+{
+	if (getState(s_name))
+		return true;
+	return false;
+}
+
 bool NFA::addTransition(const std::string& s1_name, const std::string& s2_name, char a)
 {
 	if (!isSymbolInAlphabet(a))
@@ -166,6 +178,16 @@ bool NFA::removeSpecificTransition(const std::string& s1_name, const std::string
 	s1->transitions[a].erase(s2);
 
 	return true;
+}
+
+std::set<std::string> NFA::transitionFunction(const std::string& s_name, char a) const
+{
+	std::set<std::string> result;
+	for (const auto& state : getState(s_name)->transitions[a])
+	{
+		result.insert(state->name);
+	}
+	return result;
 }
 
 bool NFA::accepts(const std::string& string_w) const
@@ -226,7 +248,103 @@ void NFA::clear()
 
 DFA NFA::toDFA()
 {
-	return DFA();
+	DFA dfa;
+	std::set<std::string> output_state;
+	std::vector<std::set<std::string>> input_states;
+	std::vector<std::set<std::string>> new_input_states;
+	std::set<std::string> current_state;
+
+	for (char symbol : alphabet)
+	{
+		dfa.addSymbol(symbol);
+	}
+
+	dfa.addState(start_state->name, start_state->accepting);
+	dfa.setStartState(start_state->name);
+	input_states.push_back({start_state->name});
+
+	while (!input_states.empty())
+	{
+		// take an input state that is not already chosen
+		current_state = input_states.front();
+		input_states.erase(input_states.begin());
+
+		for (char a : alphabet)
+		{
+			for (const auto& input_state : current_state)
+			{
+				for (const auto& s : transitionFunction(input_state, a))
+				{
+					output_state.insert(s);
+				}
+			}
+
+			std::string new_state_name;
+			bool is_accepting;
+			if (output_state.size() > 1)
+			{
+				// make new state name
+				new_state_name = "{";
+				is_accepting = false;
+				for (auto it = output_state.begin(); it != output_state.end(); it++)
+				{
+					if (it != output_state.begin())
+						new_state_name += ",";
+
+					new_state_name += *it;
+
+					if (!is_accepting && isStateAccepting(*it))
+						is_accepting = true;
+				}
+				new_state_name += "}";
+			}
+			else
+			{
+				new_state_name = *output_state.begin();
+				is_accepting = isStateAccepting(*output_state.begin());
+			}
+
+			// add the state if it doesn't exists in the dfa
+			if (!dfa.stateExists(new_state_name))
+			{
+				dfa.addState(new_state_name, is_accepting);
+				new_input_states.push_back(output_state);
+			}
+
+			std::string input_state_name;
+			if (current_state.size() > 1)
+			{
+				input_state_name = "{";
+				// input state name
+				for (auto it = current_state.begin(); it != current_state.end(); it++)
+				{
+					if (it != current_state.begin())
+						input_state_name += ",";
+
+					input_state_name += *it;
+
+					if (!is_accepting && isStateAccepting(*it))
+						is_accepting = true;
+				}
+				input_state_name += "}";
+			}
+			else
+			{
+				input_state_name = *current_state.begin();
+			}
+
+			dfa.addTransition(input_state_name, new_state_name, a);
+
+			output_state.clear();
+		}
+		input_states.insert(input_states.end(), new_input_states.begin(), new_input_states.end());
+		new_input_states.clear();
+
+	}
+
+	dfa.checkLegality();
+
+	return dfa;
 }
 
 ENFA NFA::toENFA()

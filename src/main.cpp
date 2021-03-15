@@ -20,11 +20,12 @@ using json = nlohmann::json;
 /*
  * todo
  * - implement RE
- * - implement subset construction
+ * - test new ENFA accept() out
  * - implement modified subset construction
  * - implement regex -> ENFA
  * - implement state elimination DFA -> regex
  * - implement table filling algorithm
+ * - unit testing?
  *
  * - put library source code in project
  * - check algorithms with testinput from tuyaux
@@ -55,7 +56,8 @@ int main()
 //	DFA dfa2("../automata_json/DFA2.json");
 //	DFA dfa3("../automata_json/DFA3.json");
 //	DFA dfa4("../automata_json/DFA4.json");
-//	NFA nfa("../automata_json/NFA.json");
+	NFA nfa("../automata_json/NFA.json");
+//	NFA nfa2("../automata_json/NFA2.json");
 	ENFA enfa("../automata_json/ENFA.json");
 
 //	std::cout << dfa.checkLegality() << std::endl;
@@ -71,24 +73,44 @@ int main()
 //	dfa3.genImage();
 //	dfa4.genImage();
 //	nfa.genImage();
+//	nfa2.genImage();
+//	DFA nfadfa = nfa.toDFA();
+//	nfadfa.print();
+//	nfadfa.genImage();
 //	nfa.printStats();
+//	nfa2.printStats();
 	enfa.genImage();
-	enfa.printStats();
+//	enfa.toDFA();
+//	enfa.printStats();
 
-//	RE re("(m+y)*+(e+y+m+i)s",'e');
+//	RE re;
+//	re.load("a*b+c", 'e');
+//	re.genImage();
+
+//	RE re;
+//	std::cout << re.removeOuterParentheses("(kd+e+kk+i)");
+//	re.load("(kd+e)(k+i)*(a+b)*",'e');
+	// (0+1)*1(0+1)*
+	// 0+1((0+1)*1(0+1)*)1
+	// e+0(0+1)*+(0+1)*0+1((0+1)*1(0+1)*)1
+	// e+0(0+1)*+(0+1)*0+1
+	// a(ab)*ba
+	// (kd+e+k)i*(k+i)
+	// (kd+e)(k+i)*(a+b)*
+
+//	re.genImage();
+
 //	ENFA enfa = re.toENFA();
 //	enfa.printStats();
 //	// geven true
-//	cout << boolalpha << enfa.accepts("ys") << endl;
-//	cout << boolalpha << enfa.accepts("mmyyymmmym") << endl;
-//	cout << boolalpha << enfa.accepts("s") << endl;
+//	std::cout << std::boolalpha << enfa.accepts("ys") << std::endl;
+//	std::cout << std::boolalpha << enfa.accepts("mmyyymmmym") << std::endl;
+//	std::cout << std::boolalpha << enfa.accepts("s") << std::endl;
 //
 //	// geven false
-//	cout << boolalpha << enfa.accepts("ss") << endl;
-//	cout << boolalpha << enfa.accepts("ims") << endl;
-//	cout << boolalpha << enfa.accepts("mimis") << endl;
-
-
+//	std::cout << std::boolalpha << enfa.accepts("ss") << std::endl;
+//	std::cout << std::boolalpha << enfa.accepts("ims") << std::endl;
+//	std::cout << std::boolalpha << enfa.accepts("mimis") << std::endl;
 
 	return 0;
 }
