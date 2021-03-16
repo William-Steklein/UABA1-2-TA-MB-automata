@@ -21,6 +21,7 @@ class DFA : public Automaton
 public:
 	DFA();
 	DFA(const std::string& json_filename);
+	DFA(const DFA& dfa1, const DFA& dfa2, bool intersection);
 	~DFA();
 
 	bool load(const std::string& filename) override;
@@ -28,6 +29,7 @@ public:
 
 	void addState(const std::string& name, bool is_accepting) override;
 	bool removeState(const std::string& name) override;
+	std::string getStartState() const override;
 	bool setStartState(const std::string& new_start_state_name) override;
 	bool isStateAccepting(const std::string& s_name) const override;
 	bool stateExists(const std::string& s_name) const override;
@@ -37,17 +39,19 @@ public:
 	bool accepts(const std::string& string_w) const override;
 	void clear() override;
 
+	/* product construction */
+	void product(const DFA& dfa1, const DFA& dfa2, bool intersection);
 	NFA toNFA(); // simple conversion
 	ENFA toENFA(); // simple conversion
 	/* state elimination */
 	RE toRE();
 
 	void printStats() const override;
-	bool checkLegality() const override;
+	bool isLegal() const override;
 	std::string genDOT() const override;
 
 private:
-	State* getState(const std::string& name, bool error_output) const;
+	State* getState(const std::string& name, bool error_output = true) const;
 };
 
 #endif //TA_AUTOMATA_DFA_H

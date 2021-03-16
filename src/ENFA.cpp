@@ -40,7 +40,7 @@ bool ENFA::load(const std::string& filename)
 
 	loadBaseComponents(ENFA_json);
 
-	checkLegality();
+	isLegal();
 
 	return true;
 }
@@ -122,15 +122,18 @@ bool ENFA::removeState(const std::string& name)
 	for (const auto& state : states)
 	{
 		for (auto& transitions : state.second->transitions)
-		{
 			transitions.second.erase(state_to_delete);
-		}
 	}
 
 	states.erase(name);
 	delete state_to_delete;
 
 	return true;
+}
+
+std::string ENFA::getStartState() const
+{
+	return start_state->name;
 }
 
 bool ENFA::setStartState(const std::string& new_start_state_name)
@@ -155,15 +158,35 @@ bool ENFA::stateExists(const std::string& s_name) const
 	return false;
 }
 
-bool ENFA::addTransition(const std::string& s1_name, const std::string& s2_name, char a)
+std::set<std::string> ENFA::getEClosure(const std::set<std::string>& state_set) const
 {
-	if (a != getEpsilon())
+	bool new_states_added = true;
+	std::set<std::string> current_set = state_set;
+
+	while (new_states_added)
 	{
-		if (!isSymbolInAlphabet(a))
+		new_states_added = false;
+		// adds all states from the epsilon transition to the current set
+
+		for (const auto& s : current_set)
 		{
-			return false;
+			for (const auto& new_state : transitionFunction(s, getEpsilon()))
+			{
+				if (current_set.find(new_state) == current_set.end())
+				{
+					current_set.insert(new_state);
+					new_states_added = true;
+				}
+			}
 		}
 	}
+	return current_set;
+}
+
+bool ENFA::addTransition(const std::string& s1_name, const std::string& s2_name, char a)
+{
+	if (a != getEpsilon() && !isSymbolInAlphabet(a))
+		return false;
 
 	State* s1 = getState(s1_name);
 	State* s2 = getState(s2_name);
@@ -177,13 +200,8 @@ bool ENFA::addTransition(const std::string& s1_name, const std::string& s2_name,
 
 bool ENFA::removeTransition(const std::string& s_name, char a)
 {
-	if (a != getEpsilon())
-	{
-		if (!isSymbolInAlphabet(a))
-		{
-			return false;
-		}
-	}
+	if (a != getEpsilon() && !isSymbolInAlphabet(a))
+		return false;
 
 	State* s = getState(s_name);
 
@@ -195,15 +213,10 @@ bool ENFA::removeTransition(const std::string& s_name, char a)
 	return true;
 }
 
-bool ENFA::removeSpecificTransition(const std::string& s1_name, const std::string& s2_name, char a)
+bool ENFA::removeSingleTransition(const std::string& s1_name, const std::string& s2_name, char a)
 {
-	if (a != getEpsilon())
-	{
-		if (!isSymbolInAlphabet(a))
-		{
-			return false;
-		}
-	}
+	if (a != getEpsilon() && !isSymbolInAlphabet(a))
+		return false;
 
 	State* s1 = getState(s1_name);
 	State* s2 = getState(s2_name);
@@ -226,9 +239,7 @@ std::set<std::string> ENFA::transitionFunction(const std::string& s_name, char a
 {
 	std::set<std::string> result;
 	for (const auto& state : getState(s_name)->transitions[a])
-	{
 		result.insert(state->name);
-	}
 	return result;
 }
 
@@ -240,58 +251,29 @@ bool ENFA::accepts(const std::string& string_w) const
 		return false;
 	}
 
-	std::set<State*> current_states;
-	std::set<State*> new_current_states;
-	bool new_states_added;
-	current_states.insert(start_state);
+	std::set<std::string> set_of_input_states;
+	std::set<std::string> set_of_output_states;
+	set_of_input_states.insert(start_state->name);
+
+	if (string_w.empty())
+		return isSetOfStatesAccepting(getEClosure(set_of_input_states));
 
 	for (char a : string_w)
 	{
-		if (a != getEpsilon())
-		{
-			if (!isSymbolInAlphabet(a))
-			{
-				return false;
-			}
-		}
-
-		// loops through all current states
-		for (const auto& current_state : current_states)
-		{
-			new_states_added = true;
-			while (new_states_added)
-			{
-				new_states_added = false;
-				// adds all states from the epsilon transition to the current set
-				for (const auto& new_state : current_state->transitions[getEpsilon()])
-				{
-					current_states.insert(new_state);
-					new_states_added = true;
-				}
-			}
-			if (a != getEpsilon())
-			{
-				// adds all states from the transition to the new set
-				for (const auto& new_state : current_state->transitions[a])
-				{
-					new_current_states.insert(new_state);
-				}
-			}
-		}
-
-		if (new_current_states.empty())
+		if (a != getEpsilon() && !isSymbolInAlphabet(a))
 			return false;
 
-		current_states = new_current_states;
-		new_current_states.clear();
+		set_of_input_states = getEClosure(set_of_input_states);
+		set_of_output_states = transitionFunctionSetOfStates(set_of_input_states, a);
+
+		if (set_of_output_states.empty())
+			return false;
+
+		set_of_input_states = set_of_output_states;
+		set_of_output_states.clear();
 	}
 
-	for (const auto& current_state : current_states)
-	{
-		if (current_state->accepting)
-			return true;
-	}
-	return false;
+	return isSetOfStatesAccepting(set_of_input_states);
 }
 
 void ENFA::clear()
@@ -309,7 +291,71 @@ void ENFA::clear()
 
 DFA ENFA::toDFA()
 {
-	return DFA();
+	DFA dfa;
+	std::vector<std::set<std::string>> sets_of_input_states;
+	std::vector<std::set<std::string>> new_sets_of_input_states;
+	std::set<std::string> set_of_output_states;
+	std::set<std::string> current_state;
+	bool contains_empty_set = false;
+
+	dfa.setAlphabet(getAlphabet());
+	current_state = getEClosure({ start_state->name });
+	std::string input_start_state_name = getSetOfStatesString(current_state);
+
+	dfa.addState(input_start_state_name, isSetOfStatesAccepting(current_state));
+	dfa.setStartState(input_start_state_name);
+	sets_of_input_states.push_back(current_state);
+
+	while (!sets_of_input_states.empty())
+	{
+		// takes a set of input states that hasn't been processed
+		current_state = sets_of_input_states.front();
+		sets_of_input_states.erase(sets_of_input_states.begin());
+
+		current_state = getEClosure(current_state);
+
+		for (char a : getAlphabet())
+		{
+			// transitions
+			set_of_output_states = transitionFunctionSetOfStates(current_state, a);
+			// e-closure
+			set_of_output_states = getEClosure(set_of_output_states);
+
+			std::string new_state_name;
+
+			// empty set
+			if (set_of_output_states.empty())
+			{
+				if (!contains_empty_set)
+				{
+					dfa.addState("{}", false);
+					contains_empty_set = true;
+					for (char symbol : getAlphabet())
+						dfa.addTransition("{}", "{}", symbol);
+				}
+				new_state_name = "{}";
+			}
+			else
+			{
+				new_state_name = getSetOfStatesString(set_of_output_states);
+
+				// adds the state if it doesn't exists in the dfa
+				if (!dfa.stateExists(new_state_name))
+				{
+					dfa.addState(new_state_name, isSetOfStatesAccepting(set_of_output_states));
+					new_sets_of_input_states.push_back(set_of_output_states);
+				}
+			}
+			dfa.addTransition(getSetOfStatesString(current_state), new_state_name, a);
+			set_of_output_states.clear();
+		}
+		sets_of_input_states
+			.insert(sets_of_input_states.end(), new_sets_of_input_states.begin(), new_sets_of_input_states.end());
+		new_sets_of_input_states.clear();
+
+	}
+	dfa.isLegal();
+	return dfa;
 }
 
 NFA ENFA::toNFA()
@@ -333,9 +379,7 @@ void ENFA::printStats() const
 	{
 		int no_of_transitions = 0;
 		for (const auto& state : states)
-		{
 			no_of_transitions += state.second->transitions[symbol].size();
-		}
 		std::cout << "no_of_transitions[" << symbol << "]=" << no_of_transitions << std::endl;
 	}
 
@@ -345,9 +389,7 @@ void ENFA::printStats() const
 	{
 		int degree = 0;
 		for (const auto& symbol : full_alphabet)
-		{
 			degree += state.second->transitions[symbol].size();
-		}
 		if (!degrees[degree])
 			degrees[degree] = 1;
 		else
@@ -355,12 +397,10 @@ void ENFA::printStats() const
 	}
 
 	for (const auto& degree : degrees)
-	{
 		std::cout << "degree[" << degree.first << "]=" << degree.second << std::endl;
-	}
 }
 
-bool ENFA::checkLegality() const
+bool ENFA::isLegal() const
 {
 	bool legal = true;
 
@@ -415,12 +455,13 @@ std::string ENFA::genDOT() const
 	return dot;
 }
 
-ENFA::State* ENFA::getState(const std::string& name) const
+ENFA::State* ENFA::getState(const std::string& name, bool error_output) const
 {
 	auto state = states.find(name);
 	if (state != states.end())
 		return state->second;
 
-	std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
+	if (error_output)
+		std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
 	return nullptr;
 }

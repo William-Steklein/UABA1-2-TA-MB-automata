@@ -12,6 +12,11 @@ DFA::DFA(const std::string& json_filename) : Automaton()
 	DFA::load(json_filename);
 }
 
+DFA::DFA(const DFA& dfa1, const DFA& dfa2, bool intersection)
+{
+	product(dfa1, dfa2, intersection);
+}
+
 DFA::~DFA()
 {
 	for (const auto& state : states)
@@ -31,7 +36,7 @@ bool DFA::load(const std::string& filename)
 
 	loadBaseComponents(DFA_json);
 
-	checkLegality();
+	isLegal();
 
 	return true;
 }
@@ -81,7 +86,7 @@ void DFA::addState(const std::string& name, bool is_accepting)
 
 bool DFA::removeState(const std::string& name)
 {
-	State* state_to_delete = getState(name, true);
+	State* state_to_delete = getState(name);
 	if (!state_to_delete)
 		return false;
 
@@ -94,9 +99,7 @@ bool DFA::removeState(const std::string& name)
 		for (auto& transition : state.second->transitions)
 		{
 			if (transition.second == state_to_delete)
-			{
 				transition.second = nullptr;
-			}
 		}
 	}
 
@@ -106,9 +109,14 @@ bool DFA::removeState(const std::string& name)
 	return true;
 }
 
+std::string DFA::getStartState() const
+{
+	return start_state->name;
+}
+
 bool DFA::setStartState(const std::string& new_start_state_name)
 {
-	State* new_start_state = getState(new_start_state_name, true);
+	State* new_start_state = getState(new_start_state_name);
 	if (!new_start_state)
 		return false;
 
@@ -118,7 +126,11 @@ bool DFA::setStartState(const std::string& new_start_state_name)
 
 bool DFA::isStateAccepting(const std::string& s_name) const
 {
-	return getState(s_name, true)->accepting;
+	if (stateExists(s_name))
+		return getState(s_name)->accepting;
+	else
+		std::cerr << "Error: DFA " << getID() << " state \"" + s_name + "\" doesn't exists" << std::endl;
+	return false;
 }
 
 bool DFA::stateExists(const std::string& s_name) const
@@ -133,15 +145,13 @@ bool DFA::addTransition(const std::string& s1_name, const std::string& s2_name, 
 	if (!isSymbolInAlphabet(a))
 		return false;
 
-	State* s1 = getState(s1_name, true);
-	State* s2 = getState(s2_name, true);
+	State* s1 = getState(s1_name);
+	State* s2 = getState(s2_name);
 	if (!s1 || !s2)
 		return false;
 
 	if (s1->transitions.find(a) != s1->transitions.end())
-	{
 		std::cout << "Overwriting transition δ(" << s1->name << ", " << a << ")" << std::endl;
-	}
 
 	s1->transitions[a] = s2;
 
@@ -153,7 +163,7 @@ bool DFA::removeTransition(const std::string& s_name, char a)
 	if (!isSymbolInAlphabet(a))
 		return false;
 
-	State* s = getState(s_name, true);
+	State* s = getState(s_name);
 
 	if (!s)
 		return false;
@@ -165,7 +175,10 @@ bool DFA::removeTransition(const std::string& s_name, char a)
 
 std::set<std::string> DFA::transitionFunction(const std::string& s_name, char a) const
 {
-	return {getState(s_name, true)->transitions[a]->name};
+	if (getState(s_name)->transitions[a] != nullptr)
+		return {getState(s_name)->transitions[a]->name};
+	else
+		return {};
 }
 
 bool DFA::accepts(const std::string& string_w) const
@@ -176,7 +189,7 @@ bool DFA::accepts(const std::string& string_w) const
 		return false;
 	}
 
-	State* current_state = start_state;
+	std::string current_state = start_state->name;
 
 	for (char a : string_w)
 	{
@@ -184,16 +197,16 @@ bool DFA::accepts(const std::string& string_w) const
 			return false;
 
 		// checks if there is a transition
-		if (current_state->transitions[a] == nullptr)
+		if (transitionFunction(current_state, a).empty())
 		{
-			std::cerr << "Error: δ(" << current_state->name << ", " << a << ") has no output" << std::endl;
+			std::cerr << "Error: δ(" << current_state << ", " << a << ") has no output" << std::endl;
 			return false;
 		}
 
-		current_state = current_state->transitions[a];
+		current_state = *transitionFunction(current_state, a).begin();
 	}
 
-	if (current_state->accepting)
+	if (isStateAccepting(current_state))
 		return true;
 	else
 		return false;
@@ -212,9 +225,65 @@ void DFA::clear()
 	start_state = nullptr;
 }
 
+void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
+{
+	std::pair<std::string, std::string> pair_of_input_states = {dfa1.getStartState(), dfa2.getStartState()};
+	std::pair<std::string, std::string> pair_of_output_states;
+	std::vector<std::pair<std::string, std::string>> pairs_of_input_states;
+	std::vector<std::pair<std::string, std::string>> new_pairs_of_input_states;
+	std::string new_state_name;
+
+	setAlphabet(dfa1.getAlphabet());
+
+	new_state_name = "(" + pair_of_input_states.first + "," + pair_of_input_states.second + ")";
+
+	if (intersection)
+		addState(new_state_name,
+			dfa1.isStateAccepting(pair_of_input_states.first) && dfa2.isStateAccepting(pair_of_input_states.second));
+	else
+		addState(new_state_name,
+			dfa1.isStateAccepting(pair_of_input_states.first) || dfa2.isStateAccepting(pair_of_input_states.second));
+
+	setStartState("(" + pair_of_input_states.first + "," + pair_of_input_states.second + ")");
+	pairs_of_input_states.push_back(pair_of_input_states);
+
+	while (!pairs_of_input_states.empty())
+	{
+		pair_of_input_states = pairs_of_input_states.front();
+		pairs_of_input_states.erase(pairs_of_input_states.begin());
+
+		for (char a : getAlphabet())
+		{
+			// transitions
+			pair_of_output_states.first = *dfa1.transitionFunction(pair_of_input_states.first, a).begin();
+			pair_of_output_states.second = *dfa2.transitionFunction(pair_of_input_states.second, a).begin();
+
+			new_state_name = "(" + pair_of_output_states.first + "," + pair_of_output_states.second + ")";
+
+			// adds the state if it doesn't exists in the product dfa
+			if (!stateExists(new_state_name))
+			{
+				if (intersection)
+					addState(new_state_name,
+						dfa1.isStateAccepting(pair_of_output_states.first) && dfa2.isStateAccepting(pair_of_output_states.second));
+				else
+					addState(new_state_name,
+						dfa1.isStateAccepting(pair_of_output_states.first) || dfa2.isStateAccepting(pair_of_output_states.second));
+
+				new_pairs_of_input_states.push_back(pair_of_output_states);
+			}
+			addTransition("(" + pair_of_input_states.first + "," + pair_of_input_states.second + ")",
+				new_state_name, a);
+		}
+		pairs_of_input_states
+			.insert(pairs_of_input_states.end(), new_pairs_of_input_states.begin(), new_pairs_of_input_states.end());
+		new_pairs_of_input_states.clear();
+	}
+	isLegal();
+}
+
 NFA DFA::toNFA()
 {
-	for ()
 	return NFA();
 }
 
@@ -260,7 +329,7 @@ void DFA::printStats() const
 	}
 }
 
-bool DFA::checkLegality() const
+bool DFA::isLegal() const
 {
 	bool legal = true;
 

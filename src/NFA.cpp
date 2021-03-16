@@ -31,7 +31,7 @@ bool NFA::load(const std::string& filename)
 
 	loadBaseComponents(NFA_json);
 
-	checkLegality();
+	isLegal();
 
 	return true;
 }
@@ -95,15 +95,18 @@ bool NFA::removeState(const std::string& name)
 	for (const auto& state : states)
 	{
 		for (auto& transitions : state.second->transitions)
-		{
 			transitions.second.erase(state_to_delete);
-		}
 	}
 
 	states.erase(name);
 	delete state_to_delete;
 
 	return true;
+}
+
+std::string NFA::getStartState() const
+{
+	return start_state->name;
 }
 
 bool NFA::setStartState(const std::string& new_start_state_name)
@@ -135,6 +138,7 @@ bool NFA::addTransition(const std::string& s1_name, const std::string& s2_name, 
 
 	State* s1 = getState(s1_name);
 	State* s2 = getState(s2_name);
+
 	if (!s1 || !s2)
 		return false;
 
@@ -158,7 +162,7 @@ bool NFA::removeTransition(const std::string& s_name, char a)
 	return true;
 }
 
-bool NFA::removeSpecificTransition(const std::string& s1_name, const std::string& s2_name, char a)
+bool NFA::removeSingleTransition(const std::string& s1_name, const std::string& s2_name, char a)
 {
 	if (!isSymbolInAlphabet(a))
 		return false;
@@ -184,9 +188,7 @@ std::set<std::string> NFA::transitionFunction(const std::string& s_name, char a)
 {
 	std::set<std::string> result;
 	for (const auto& state : getState(s_name)->transitions[a])
-	{
 		result.insert(state->name);
-	}
 	return result;
 }
 
@@ -198,39 +200,25 @@ bool NFA::accepts(const std::string& string_w) const
 		return false;
 	}
 
-	std::set<State*> current_states;
-	std::set<State*> new_current_states;
-	current_states.insert(start_state);
+	std::set<std::string> set_of_input_states;
+	std::set<std::string> set_of_output_states;
+	set_of_input_states.insert(start_state->name);
 
 	for (char a : string_w)
 	{
 		if (!isSymbolInAlphabet(a))
 			return false;
 
-		// loops through all current states
-		for (const auto& current_state : current_states)
-		{
-			// adds all states from the transition to the new set
-			for (const auto& new_state : current_state->transitions[a])
-			{
-				if (new_state != nullptr)
-					new_current_states.insert(new_state);
-			}
-		}
+		set_of_output_states = transitionFunctionSetOfStates(set_of_input_states, a);
 
-		if (new_current_states.empty())
+		if (set_of_output_states.empty())
 			return false;
 
-		current_states = new_current_states;
-		new_current_states.clear();
+		set_of_input_states = set_of_output_states;
+		set_of_output_states.clear();
 	}
 
-	for (const auto& current_state : current_states)
-	{
-		if (current_state->accepting)
-			return true;
-	}
-	return false;
+	return isSetOfStatesAccepting(set_of_input_states);
 }
 
 void NFA::clear()
@@ -249,104 +237,67 @@ void NFA::clear()
 DFA NFA::toDFA()
 {
 	DFA dfa;
-	std::set<std::string> output_state;
-	std::vector<std::set<std::string>> input_states;
-	std::vector<std::set<std::string>> new_input_states;
+	std::vector<std::set<std::string>> sets_of_input_states;
+	std::vector<std::set<std::string>> new_sets_of_input_states;
+	std::set<std::string> set_of_output_states;
 	std::set<std::string> current_state;
+	bool contains_empty_set = false;
 
-	for (char symbol : alphabet)
+	dfa.setAlphabet(getAlphabet());
+
+	std::string start_state_name = getSetOfStatesString({start_state->name});
+
+	dfa.addState(start_state_name, isStateAccepting(start_state->name));
+	dfa.setStartState(start_state_name);
+	sets_of_input_states.push_back({ start_state->name });
+
+	while (!sets_of_input_states.empty())
 	{
-		dfa.addSymbol(symbol);
-	}
+		// takes a set of input states that hasn't been processed
+		current_state = sets_of_input_states.front();
+		sets_of_input_states.erase(sets_of_input_states.begin());
 
-	dfa.addState(start_state->name, start_state->accepting);
-	dfa.setStartState(start_state->name);
-	input_states.push_back({start_state->name});
-
-	while (!input_states.empty())
-	{
-		// take an input state that is not already chosen
-		current_state = input_states.front();
-		input_states.erase(input_states.begin());
-
-		for (char a : alphabet)
+		for (char a : getAlphabet())
 		{
-			for (const auto& input_state : current_state)
-			{
-				for (const auto& s : transitionFunction(input_state, a))
-				{
-					output_state.insert(s);
-				}
-			}
+			// transitions
+			set_of_output_states = transitionFunctionSetOfStates(current_state, a);
 
 			std::string new_state_name;
-			bool is_accepting;
-			if (output_state.size() > 1)
+
+			// empty set
+			if (set_of_output_states.empty())
 			{
-				// make new state name
-				new_state_name = "{";
-				is_accepting = false;
-				for (auto it = output_state.begin(); it != output_state.end(); it++)
+				if (!contains_empty_set)
 				{
-					if (it != output_state.begin())
-						new_state_name += ",";
-
-					new_state_name += *it;
-
-					if (!is_accepting && isStateAccepting(*it))
-						is_accepting = true;
+					dfa.addState("{}", false);
+					contains_empty_set = true;
+					for (char symbol : getAlphabet())
+						dfa.addTransition("{}", "{}", symbol);
 				}
-				new_state_name += "}";
+				new_state_name = "{}";
 			}
 			else
 			{
-				new_state_name = *output_state.begin();
-				is_accepting = isStateAccepting(*output_state.begin());
-			}
+				new_state_name = getSetOfStatesString(set_of_output_states);
 
-			// add the state if it doesn't exists in the dfa
-			if (!dfa.stateExists(new_state_name))
-			{
-				dfa.addState(new_state_name, is_accepting);
-				new_input_states.push_back(output_state);
-			}
-
-			std::string input_state_name;
-			if (current_state.size() > 1)
-			{
-				input_state_name = "{";
-				// input state name
-				for (auto it = current_state.begin(); it != current_state.end(); it++)
+				// adds the state if it doesn't exists in the dfa
+				if (!dfa.stateExists(new_state_name))
 				{
-					if (it != current_state.begin())
-						input_state_name += ",";
-
-					input_state_name += *it;
-
-					if (!is_accepting && isStateAccepting(*it))
-						is_accepting = true;
+					dfa.addState(new_state_name, isSetOfStatesAccepting(set_of_output_states));
+					new_sets_of_input_states.push_back(set_of_output_states);
 				}
-				input_state_name += "}";
 			}
-			else
-			{
-				input_state_name = *current_state.begin();
-			}
-
-			dfa.addTransition(input_state_name, new_state_name, a);
-
-			output_state.clear();
+			dfa.addTransition(getSetOfStatesString(current_state), new_state_name, a);
+			set_of_output_states.clear();
 		}
-		input_states.insert(input_states.end(), new_input_states.begin(), new_input_states.end());
-		new_input_states.clear();
+		sets_of_input_states
+			.insert(sets_of_input_states.end(), new_sets_of_input_states.begin(), new_sets_of_input_states.end());
+		new_sets_of_input_states.clear();
 
 	}
-
-	dfa.checkLegality();
-
+	dfa.isLegal();
 	return dfa;
 }
-
 ENFA NFA::toENFA()
 {
 	return ENFA();
@@ -365,9 +316,7 @@ void NFA::printStats() const
 	{
 		int no_of_transitions = 0;
 		for (const auto& state : states)
-		{
 			no_of_transitions += state.second->transitions[symbol].size();
-		}
 		std::cout << "no_of_transitions[" << symbol << "]=" << no_of_transitions << std::endl;
 	}
 
@@ -377,9 +326,7 @@ void NFA::printStats() const
 	{
 		int degree = 0;
 		for (const auto& symbol : alphabet)
-		{
 			degree += state.second->transitions[symbol].size();
-		}
 		if (!degrees[degree])
 			degrees[degree] = 1;
 		else
@@ -387,12 +334,10 @@ void NFA::printStats() const
 	}
 
 	for (const auto& degree : degrees)
-	{
 		std::cout << "degree[" << degree.first << "]=" << degree.second << std::endl;
-	}
 }
 
-bool NFA::checkLegality() const
+bool NFA::isLegal() const
 {
 	// checks if it has a start state
 	if (!start_state)

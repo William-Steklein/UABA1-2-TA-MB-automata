@@ -86,6 +86,11 @@ bool Automaton::removeSymbol(char symbol)
 	return true;
 }
 
+std::set<char> Automaton::getAlphabet() const
+{
+	return alphabet;
+}
+
 void Automaton::setAlphabet(const std::string& new_alphabet)
 {
 	clearAlphabet();
@@ -93,6 +98,11 @@ void Automaton::setAlphabet(const std::string& new_alphabet)
 	{
 		addSymbol(symbol);
 	}
+}
+
+void Automaton::setAlphabet(const std::set<char>& new_alphabet)
+{
+	alphabet = new_alphabet;
 }
 
 void Automaton::clearAlphabet()
@@ -108,6 +118,44 @@ int Automaton::getID() const
 void Automaton::print() const
 {
 	std::cout << std::setw(4) << save() << std::endl;
+}
+
+bool Automaton::isSetOfStatesAccepting(const std::set<std::string>& set_of_states) const
+{
+	for (const auto& s : set_of_states)
+	{
+		if (isStateAccepting(s))
+			return true;
+	}
+	return false;
+}
+
+std::string Automaton::getSetOfStatesString(const std::set<std::string>& set_of_states) const
+{
+	std::string set_of_states_string;
+
+	set_of_states_string = "{";
+	for (auto it = set_of_states.begin(); it != set_of_states.end(); it++)
+	{
+		if (it != set_of_states.begin())
+			set_of_states_string += ",";
+
+		set_of_states_string += *it;
+	}
+	set_of_states_string += "}";
+
+	return set_of_states_string;
+}
+
+std::set<std::string> Automaton::transitionFunctionSetOfStates(const std::set<std::string>& set_of_inputstates, char a) const
+{
+	std::set<std::string> set_of_output_states;
+	for (const auto& input_state : set_of_inputstates)
+	{
+		for (const auto& output_state : transitionFunction(input_state, a))
+			set_of_output_states.insert(output_state);
+	}
+	return set_of_output_states;
 }
 
 bool Automaton::genImage() const

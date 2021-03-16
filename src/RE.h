@@ -32,7 +32,7 @@ public:
 	~RE();
 
 	bool load(const std::string& regex_string, char epsilon);
-	void save();
+	std::string save();
 	void print();
 
 	DFA toDFA(); // finished
@@ -45,12 +45,12 @@ public:
 	bool genImage() const;
 
 private:
-//	RENode* parse(const std::string& regex_string, char eps);
-	RENode* parse2(const std::string& regex_string2, char eps);
+	void deleteNode(RE::RENode* current_node);
+	RENode* parse(const std::string& regex_string2, char eps);
 	std::string genDOTRec(RE::RENode* current_node) const;
 	std::string removeOuterParentheses(const std::string& regex_string) const;
 	bool isValidRE(const std::string& regex_string) const;
-	std::string printRec (RE::RENode* current_node) const;
+	std::string printRec (RE::RENode* current_node, bool is_base = true) const;
 
 };
 

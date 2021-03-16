@@ -16,7 +16,6 @@ class ENFA : public Automaton
 		bool accepting = false;
 	};
 	std::map<std::string, State*> states;
-
 	State* start_state = nullptr;
 	char epsilon;
 
@@ -32,14 +31,16 @@ public:
 	char getEpsilon() const;
 	void addState(const std::string& name, bool is_accepting) override;
 	bool removeState(const std::string& name) override;
+	std::string getStartState() const override;
 	bool setStartState(const std::string& new_start_state_name) override;
 	bool isStateAccepting(const std::string& s_name) const override;
 	bool stateExists(const std::string& s_name) const override;
+	std::set<std::string> getEClosure(const std::set<std::string>& state_set) const;
 	bool addTransition(const std::string& s1_name, const std::string& s2_name, char a) override;
 	/* removes all transitions from state s_name with symbol a */
 	bool removeTransition(const std::string& s_name, char a) override;
-	/* removes one specific transition */
-	bool removeSpecificTransition(const std::string& s1_name, const std::string& s2_name, char a);
+	/* removes a transition */
+	bool removeSingleTransition(const std::string& s1_name, const std::string& s2_name, char a);
 	std::set<std::string> transitionFunction(const std::string& s_name, char a) const override;
 	bool accepts(const std::string& string_w) const override;
 	void clear() override;
@@ -50,11 +51,11 @@ public:
 	RE toRE(); // finished
 
 	void printStats() const override;
-	bool checkLegality() const override;
+	bool isLegal() const override;
 	std::string genDOT() const override;
 
 private:
-	State* getState(const std::string& name) const;
+	State* getState(const std::string& name, bool error_output = true) const;
 };
 
 #endif //TA_AUTOMATA_SRC_ENFA_H

@@ -11,26 +11,28 @@
 #include "RE.h"
 #include "json.hpp"
 
-
 //using json = nlohmann::ordered_json;
 using json = nlohmann::json;
 
-// todo: put library source code in project
-// todo: check algorithms with testinput from tuyaux
 /*
- * todo
- * - implement RE
- * - test new ENFA accept() out
- * - implement modified subset construction
- * - implement regex -> ENFA
- * - implement state elimination DFA -> regex
- * - implement table filling algorithm
- * - unit testing?
+ * todo implementation
+ * - regex -> ENFA
+ * - state elimination DFA -> regex
+ * - table filling algorithm
  *
+ *
+ * todo cleaning
+ * - "Overwriting transition δ(..." => overwriting ... to ...
+ * - automaton id in all errors
+ * - clean or rewrite RE parser
+ *
+ *
+ * todo changes/other
  * - put library source code in project
  * - check algorithms with testinput from tuyaux
  * - change toDot(), so that if there are two arrows with the same origin and destination, it will make one arrow and
  * add the symbols with a comma.
+ * - unit testing?
  * - maybe change everything with this std::map<std::string, std::map<char, std::set<State*>>> transitions2;
  *
  */
@@ -56,49 +58,81 @@ int main()
 //	DFA dfa2("../automata_json/DFA2.json");
 //	DFA dfa3("../automata_json/DFA3.json");
 //	DFA dfa4("../automata_json/DFA4.json");
-	NFA nfa("../automata_json/NFA.json");
-//	NFA nfa2("../automata_json/NFA2.json");
-	ENFA enfa("../automata_json/ENFA.json");
-
-//	std::cout << dfa.checkLegality() << std::endl;
-//	std::cout << dfa2.checkLegality() << std::endl;
-//	std::cout << dfa3.checkLegality() << std::endl;
-//	std::cout << dfa4.checkLegality() << std::endl;
-//	std::cout << nfa.checkLegality() << std::endl;
-//	std::cout << enfa.checkLegality() << std::endl;
-
-
+//
+//	std::cout << dfa.isLegal() << std::endl;
+//	std::cout << dfa2.isLegal() << std::endl;
+//	std::cout << dfa3.isLegal() << std::endl;
+//	std::cout << dfa4.isLegal() << std::endl;
+//
 //	dfa.genImage();
 //	dfa2.genImage();
 //	dfa3.genImage();
 //	dfa4.genImage();
+//
+//
+//
+//	NFA nfa("../automata_json/NFA.json");
+//	NFA nfa2("../automata_json/NFA2.json");
+//	NFA nfa3("../automata_json/NFA3.json");
+//
+//	std::cout << nfa.isLegal() << std::endl;
+//	std::cout << nfa2.isLegal() << std::endl;
+//	std::cout << nfa3.isLegal() << std::endl;
+//
 //	nfa.genImage();
 //	nfa2.genImage();
-//	DFA nfadfa = nfa.toDFA();
-//	nfadfa.print();
-//	nfadfa.genImage();
-//	nfa.printStats();
-//	nfa2.printStats();
-	enfa.genImage();
-//	enfa.toDFA();
-//	enfa.printStats();
+//	nfa3.genImage();
+//
+//	DFA nfa_dfa = nfa.toDFA();
+//	nfa_dfa.genImage();
+//	DFA nfa2_dfa = nfa.toDFA();
+//	nfa2_dfa.genImage();
+//	DFA nfa3_dfa = nfa3.toDFA();
+//	nfa3_dfa.genImage();
+
+	DFA dfa5("../automata_json/DFA5.json");
+	dfa5.genImage();
+	DFA dfa6("../automata_json/DFA6.json");
+	dfa6.genImage();
+	DFA product_dfa(dfa5, dfa6, true);
+	product_dfa.genImage();
+
+
+//	ENFA enfa("../automata_json/ENFA.json");
+//	ENFA enfa2("../automata_json/ENFA2.json");
+
+//	std::cout << enfa.isLegal() << std::endl;
+//	std::cout << enfa2.isLegal() << std::endl;
+
+//	enfa.genImage();
+//	enfa2.genImage();
+
+//	DFA enfa_dfa = enfa.toDFA();
+//	enfa_dfa.genImage();
+//	DFA enfa2_dfa = enfa2.toDFA();
+//	enfa2_dfa.genImage();
+
+
+
 
 //	RE re;
-//	re.load("a*b+c", 'e');
+//	re.load("(kd+e)(k+i)*(a+b)*", 'e');
 //	re.genImage();
+//	re.print();
+//
+//	RE re2;
+//	re2.load("(kd+e)(k+i)*(a+b)*",'e');
+//	re2.genImage();
 
-//	RE re;
-//	std::cout << re.removeOuterParentheses("(kd+e+kk+i)");
-//	re.load("(kd+e)(k+i)*(a+b)*",'e');
-	// (0+1)*1(0+1)*
-	// 0+1((0+1)*1(0+1)*)1
-	// e+0(0+1)*+(0+1)*0+1((0+1)*1(0+1)*)1
-	// e+0(0+1)*+(0+1)*0+1
-	// a(ab)*ba
-	// (kd+e+k)i*(k+i)
-	// (kd+e)(k+i)*(a+b)*
+//	 (0+1)*1(0+1)*
+//	 0+1((0+1)*1(0+1)*)1
+//	 e+0(0+1)*+(0+1)*0+1(0+1)*1(0+1)*1
+//	 e+0(0+1)*+(0+1)*0+1
+//	 a(ab)*ba
+//	 (kd+e+k)i*(k+i)
+//	 (kd+e)(k+i)*(a+b)*
 
-//	re.genImage();
+
 
 //	ENFA enfa = re.toENFA();
 //	enfa.printStats();
