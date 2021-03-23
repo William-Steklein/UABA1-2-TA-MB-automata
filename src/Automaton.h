@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <tuple>
 #include <graphviz/gvc.h>
 #include "json.hpp"
 
@@ -56,6 +57,8 @@ public:
 	/* Sets a state as the start of the automaton, can only have one startstate */
 	virtual bool setStartState(const std::string& new_start_state_name) = 0;
 	virtual bool isStateAccepting(const std::string& s_name) const = 0;
+	virtual void setStateAccepting(const std::string& s_name, bool is_accepting) const = 0;
+	virtual std::set<std::string> getAllStates() const = 0;
 	bool isSetOfStatesAccepting(const std::set<std::string>& set_of_states) const;
 	std::string getSetOfStatesString(const std::set<std::string>& set_of_states) const;
 	virtual bool stateExists(const std::string& s_name) const = 0;

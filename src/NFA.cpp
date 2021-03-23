@@ -124,6 +124,21 @@ bool NFA::isStateAccepting(const std::string& s_name) const
 	return getState(s_name)->accepting;
 }
 
+std::set<std::string> NFA::getAllStates() const
+{
+	std::set<std::string> all_states;
+	for (const auto& state : states)
+		all_states.insert(state.first);
+	return all_states;
+}
+
+void NFA::setStateAccepting(const std::string& s_name, bool is_accepting) const
+{
+	State* s = getState(s_name);
+	if (s != nullptr)
+		s->accepting = is_accepting;
+}
+
 bool NFA::stateExists(const std::string& s_name) const
 {
 	if (getState(s_name))
@@ -234,7 +249,7 @@ void NFA::clear()
 	start_state = nullptr;
 }
 
-DFA NFA::toDFA()
+DFA NFA::toDFA() const
 {
 	DFA dfa;
 	std::vector<std::set<std::string>> sets_of_input_states;
@@ -298,12 +313,12 @@ DFA NFA::toDFA()
 	dfa.isLegal();
 	return dfa;
 }
-ENFA NFA::toENFA()
+ENFA NFA::toENFA() const
 {
 	return ENFA();
 }
 
-RE NFA::toRE()
+RE NFA::toRE() const
 {
 	return toDFA().toRE();
 }

@@ -1,6 +1,7 @@
 #include "Automaton.h"
 
 const std::string DOT_IMAGES_PATH = "../DOT_images/";
+const std::string DOT_FILES_PATH = "../DOT_files/";
 int Automaton::nextID = 0;
 
 Automaton::Automaton()
@@ -160,7 +161,7 @@ std::set<std::string> Automaton::transitionFunctionSetOfStates(const std::set<st
 
 bool Automaton::genImage() const
 {
-	std::string path = DOT_IMAGES_PATH + std::to_string(getID()) + ".dot";
+	std::string path = DOT_FILES_PATH + std::to_string(getID()) + ".dot";
 
 	std::ofstream file(path);
 	std::string my_string = genDOT();

@@ -4,6 +4,7 @@
 #include "RE.h"
 
 const std::string DOT_IMAGES_PATH = "../DOT_images/";
+const std::string DOT_FILES_PATH = "../DOT_files/";
 int RE::nextID = 0;
 
 RE::RE()
@@ -19,17 +20,29 @@ RE::RE(const std::string& regex_string, char epsilon)
 
 RE::~RE()
 {
-	deleteNode(start_node);
+//	deleteNode(start_node);
 }
 
 void RE::deleteNode(RE::RENode* current_node)
 {
+	if (!current_node)
+		return;
 	if (!current_node->children.empty())
 	{
 		for (const auto& child : current_node->children)
 			deleteNode(child);
 	}
 	delete current_node;
+}
+
+bool RE::load(const std::string& regex_string, char _epsilon)
+{
+	epsilon = _epsilon;
+	start_node = parse(regex_string, _epsilon);
+
+	if (start_node)
+		return true;
+	return false;
 }
 
 RE::RENode* RE::parse(const std::string& regex_string2, char eps)
@@ -53,9 +66,12 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 			regex_string[0],
 			nullptr,
 			{},
-			nr_of_nodes};
+			nr_of_nodes };
 
 		nr_of_nodes++;
+
+		if (regex_string[0] != eps)
+			alphabet.insert(regex_string[0]);
 
 		return node;
 	}
@@ -68,7 +84,7 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 			' ',
 			nullptr,
 			{ parse(regex_string.substr(0, 1), eps) },
-			nr_of_nodes};
+			nr_of_nodes };
 
 		nr_of_nodes++;
 
@@ -85,7 +101,7 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 			' ',
 			nullptr,
 			{ parse(regex_string.substr(1, regex_string.size() - 3), eps) },
-			nr_of_nodes};
+			nr_of_nodes };
 
 		nr_of_nodes++;
 		node->children[0]->parent = node;
@@ -115,7 +131,8 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 				char next_char = regex_string[i + 1];
 				if (next_char == '+')
 				{
-					is_plus = true; is_dot = false;
+					is_plus = true;
+					is_dot = false;
 				}
 				else if (next_char != ')' && !is_plus)
 				{
@@ -124,7 +141,8 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 						current_dotstring.clear();
 						current_dotstring = current_string;
 						is_dot = true;
-					} else
+					}
+					else
 					{
 						dotstring_list.push_back(current_dotstring + '*');
 						current_dotstring.clear();
@@ -132,7 +150,7 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 						continue;
 					}
 				}
-				// var
+					// var
 				else
 				{
 					current_string += '*';
@@ -142,7 +160,8 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 				{
 					current_dotstring += '*';
 					current_string += '*';
-				} else
+				}
+				else
 				{
 					string_list.push_back(current_string + '*');
 					current_string.clear();
@@ -168,7 +187,7 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 		}
 		else if (current_char == ')')
 		{
-			if (indent == 1  && i < regex_string.size() - 1)
+			if (indent == 1 && i < regex_string.size() - 1)
 			{
 				indent--;
 				is_in_substring = false;
@@ -176,7 +195,8 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 
 				if (next_char == '+')
 				{
-					is_plus = true; is_dot = false;
+					is_plus = true;
+					is_dot = false;
 				}
 				else if (next_char == '(' && !is_plus)
 				{
@@ -198,13 +218,15 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 				}
 				else if (next_char != ')')
 				{
-					if (!is_plus) {
+					if (!is_plus)
+					{
 						if (!is_dot)
 						{
 							current_dotstring.clear();
 							current_dotstring = current_string;
 							is_dot = true;
-						} else
+						}
+						else
 						{
 							dotstring_list.push_back(current_dotstring + ')');
 							current_dotstring.clear();
@@ -222,7 +244,8 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 				{
 					current_dotstring += ')';
 					current_string += ')';
-				} else
+				}
+				else
 				{
 					string_list.push_back(current_string + ')');
 					current_string.clear();
@@ -235,7 +258,7 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 				indent--;
 			}
 		}
-		// var
+			// var
 		else
 		{
 			if (!is_in_substring && i < regex_string.size() - 1)
@@ -243,7 +266,8 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 				char next_char = regex_string[i + 1];
 				if (next_char == '+')
 				{
-					is_plus = true; is_dot = false;
+					is_plus = true;
+					is_dot = false;
 				}
 				else if (next_char == '*')
 				{
@@ -259,7 +283,8 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 					{
 						current_dotstring.clear();
 						is_dot = true;
-					} else
+					}
+					else
 					{
 						dotstring_list.push_back(current_dotstring);
 						current_dotstring.clear();
@@ -299,7 +324,7 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 			' ',
 			nullptr,
 			children,
-			nr_of_nodes};
+			nr_of_nodes };
 
 		nr_of_nodes++;
 
@@ -330,7 +355,7 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 			' ',
 			nullptr,
 			children,
-			nr_of_nodes};
+			nr_of_nodes };
 
 		nr_of_nodes++;
 
@@ -346,25 +371,169 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 	return nullptr;
 }
 
-bool RE::load(const std::string& regex_string, char _epsilon)
-{
-	start_node = parse(regex_string, _epsilon);
-
-	epsilon = _epsilon;
-
-	if (start_node)
-		return true;
-	return false;
-}
-
-std::string RE::save()
+std::string RE::save() const
 {
 	return printRec(start_node);
 }
 
-void RE::print()
+void RE::print() const
 {
 	std::cout << printRec(start_node) << std::endl;
+}
+
+bool RE::empty() const
+{
+	if (!start_node)
+		return true;
+	return false;
+}
+
+void RE::setAlphabet(const std::set<char>& _alphabet)
+{
+	alphabet = _alphabet;
+}
+
+void RE::setEpsilon(char _epsilon)
+{
+	epsilon = _epsilon;
+}
+
+void RE::varRE(char symbol)
+{
+	deleteNode(start_node);
+
+	start_node = new RENode{ var,
+							 symbol,
+							 nullptr,
+							 {},
+							 0 };
+}
+
+void RE::unionRE(const std::vector<RE*>& regexes)
+{
+	std::vector<RE*> regexes2;
+	for (const auto& regex : regexes)
+	{
+		if (regex && !regex->empty())
+			regexes2.push_back(regex);
+	}
+	if (regexes2.empty())
+	{
+		std::cerr << "Error: empty union" << std::endl;
+		return;
+	}
+	else if (regexes2.size() == 1)
+	{
+		start_node = regexes2[0]->start_node;
+		return;
+	}
+
+	deleteNode(start_node);
+
+	start_node = new RENode{ plus,
+							 ' ',
+							 nullptr,
+							 {},
+							 0 };
+
+	for (const auto& regex : regexes)
+	{
+		if (regex->start_node->nodetype != plus)
+		{
+			RENode* new_child = new RENode;
+			new_child = regex->start_node;
+
+			new_child->parent = start_node;
+			start_node->children.push_back(new_child);
+		}
+		else
+		{
+			for (const auto& child_regex : regex->start_node->children)
+			{
+				RENode* new_child = new RENode;
+				new_child = child_regex;
+
+				child_regex->parent = start_node;
+				start_node->children.push_back(new_child);
+			}
+		}
+	}
+
+	resetRENodeIDs(start_node);
+}
+
+void RE::concatenateRE(const std::vector<RE*>& regexes)
+{
+	std::vector<RE*> regexes2;
+	for (const auto& regex : regexes)
+	{
+		if (regex && !regex->empty())
+		{
+			regexes2.push_back(regex);
+		}
+	}
+	if (regexes2.empty())
+	{
+		std::cerr << "Error: empty concatenation" << std::endl;
+		return;
+	}
+	else if (regexes2.size() == 1)
+	{
+		start_node = regexes2[0]->start_node;
+		return;
+	}
+
+	deleteNode(start_node);
+
+	start_node = new RENode{ dot,
+							 ' ',
+							 nullptr,
+							 {},
+							 0 };
+
+	for (const auto& regex : regexes2)
+	{
+		if (regex->start_node->nodetype != dot)
+		{
+			RENode* new_child = new RENode;
+			*new_child = *regex->start_node;
+
+			new_child->parent = start_node;
+			start_node->children.push_back(new_child);
+		}
+		else
+		{
+			for (const auto& child_regex : regex->start_node->children)
+			{
+				RENode* new_child = new RENode;
+				*new_child = *child_regex;
+
+				child_regex->parent = start_node;
+				start_node->children.push_back(new_child);
+			}
+		}
+	}
+
+	resetRENodeIDs(start_node);
+}
+
+void RE::kleeneStarRE(RE* regex)
+{
+	if (!regex || regex->empty())
+	{
+		std::cerr << "Error: kleene star on empty regex" << std::endl;
+		return;
+	}
+	deleteNode(start_node);
+
+	regex->start_node->parent = start_node;
+	start_node = new RENode{ star,
+							 ' ',
+							 nullptr,
+							 { regex->start_node },
+							 0 };
+
+	resetRENodeIDs(start_node);
 }
 
 std::string RE::printRec(RE::RENode* current_node, bool is_base) const
@@ -403,19 +572,111 @@ std::string RE::printRec(RE::RENode* current_node, bool is_base) const
 	return current_regex_string;
 }
 
-DFA RE::toDFA()
+DFA RE::toDFA() const
 {
 	return toENFA().toDFA();
 }
 
-NFA RE::toNFA()
+NFA RE::toNFA() const
 {
 	return toENFA().toNFA();
 }
 
-ENFA RE::toENFA()
+ENFA RE::toENFA() const
 {
-	return ENFA();
+	ENFA enfa;
+	enfa.setAlphabet(alphabet);
+	enfa.setEpsilon(epsilon);
+	std::tuple<std::string, std::string, int> return_tuple = toENFARec(enfa, start_node);
+	enfa.setStartState(std::get<0>(return_tuple));
+	enfa.setStateAccepting(std::get<1>(return_tuple), true);
+
+	return enfa;
+}
+
+std::tuple<std::string, std::string, int> RE::toENFARec(ENFA& enfa,
+	RENode* current_node,
+	int nr_of_enfanodes) const
+{
+	std::tuple<std::string, std::string, int> child_return_tuple;
+	std::string start_state;
+	std::string end_state;
+	int current_nr_of_enfanodes = nr_of_enfanodes;
+
+	if (current_node->nodetype == plus)
+	{
+		current_nr_of_enfanodes++;
+		start_state = std::to_string(current_nr_of_enfanodes);
+		enfa.addState(start_state, false);
+
+		current_nr_of_enfanodes++;
+		end_state = std::to_string(current_nr_of_enfanodes);
+		enfa.addState(end_state, false);
+
+		for (const auto& child_node : current_node->children)
+		{
+			child_return_tuple = toENFARec(enfa, child_node, current_nr_of_enfanodes);
+			current_nr_of_enfanodes = std::get<2>(child_return_tuple);
+
+			enfa.addTransition(start_state, std::get<0>(child_return_tuple), enfa.getEpsilon());
+			enfa.addTransition(std::get<1>(child_return_tuple), end_state, enfa.getEpsilon());
+		}
+	}
+	else if (current_node->nodetype == dot)
+	{
+		child_return_tuple = toENFARec(enfa, current_node->children.front(), current_nr_of_enfanodes);
+		current_nr_of_enfanodes = std::get<2>(child_return_tuple);
+
+		start_state = std::get<0>(child_return_tuple);
+		std::string start_state_chain = std::get<1>(child_return_tuple);
+		std::string end_state_chain;
+
+		for (int i = 1; i < current_node->children.size(); i++)
+		{
+			child_return_tuple = toENFARec(enfa, current_node->children[i], current_nr_of_enfanodes);
+			current_nr_of_enfanodes = std::get<2>(child_return_tuple);
+
+			end_state_chain = std::get<0>(child_return_tuple);
+
+			enfa.addTransition(start_state_chain, end_state_chain, enfa.getEpsilon());
+
+			start_state_chain = std::get<1>(child_return_tuple);
+		}
+
+		end_state = std::get<1>(child_return_tuple);
+	}
+	else if (current_node->nodetype == star)
+	{
+		current_nr_of_enfanodes++;
+		start_state = std::to_string(current_nr_of_enfanodes);
+		enfa.addState(start_state, false);
+
+		current_nr_of_enfanodes++;
+		end_state = std::to_string(current_nr_of_enfanodes);
+		enfa.addState(end_state, false);
+
+		child_return_tuple = toENFARec(enfa, current_node->children[0], current_nr_of_enfanodes);
+		current_nr_of_enfanodes = std::get<2>(child_return_tuple);
+
+		enfa.addTransition(start_state, std::get<0>(child_return_tuple), enfa.getEpsilon());
+		enfa.addTransition(start_state, end_state, enfa.getEpsilon());
+		enfa.addTransition(std::get<1>(child_return_tuple), end_state, enfa.getEpsilon());
+		enfa.addTransition(std::get<1>(child_return_tuple), std::get<0>(child_return_tuple), enfa.getEpsilon());
+	}
+	else if (current_node->nodetype == var)
+	{
+		current_nr_of_enfanodes++;
+		start_state = std::to_string(current_nr_of_enfanodes);
+		enfa.addState(start_state, false);
+
+		current_nr_of_enfanodes++;
+		end_state = std::to_string(current_nr_of_enfanodes);
+		enfa.addState(end_state, false);
+
+		enfa.addTransition(start_state, end_state, current_node->symbol);
+	}
+
+	return { start_state, end_state, current_nr_of_enfanodes };
 }
 
 int RE::getID() const
@@ -445,7 +706,6 @@ std::string RE::genDOTRec(RE::RENode* current_node) const
 	return dot_string;
 }
 
-
 std::string RE::genDOT() const
 {
 	std::string dot;
@@ -463,7 +723,7 @@ std::string RE::genDOT() const
 
 bool RE::genImage() const
 {
-	std::string path = DOT_IMAGES_PATH + "RE_" + std::to_string(getID()) + ".dot";
+	std::string path = DOT_FILES_PATH + "RE_" + std::to_string(getID()) + ".dot";
 
 	std::ofstream file(path);
 	std::string my_string = genDOT();
@@ -478,7 +738,7 @@ bool RE::genImage() const
 	g = agread(fp, nullptr);
 	gvLayout(gvc, g, "dot");
 	gvRender(gvc, g, "png", fopen((DOT_IMAGES_PATH + "RE_"
-	+ std::to_string(getID()) + "_image.png").c_str(),"w"));
+		+ std::to_string(getID()) + "_image.png").c_str(), "w"));
 	gvFreeLayout(gvc, g);
 	agclose(g);
 
@@ -534,4 +794,18 @@ bool RE::isValidRE(const std::string& regex_string) const
 		return true;
 	else
 		return false;
+}
+
+int RE::resetRENodeIDs(RENode* current_node, bool is_start)
+{
+	if (is_start)
+		nr_of_nodes = 0;
+
+	current_node->node_id = nr_of_nodes;
+	nr_of_nodes++;
+
+	for (const auto& child_node : current_node->children)
+		nr_of_nodes = resetRENodeIDs(child_node, false);
+
+	return nr_of_nodes;
 }

@@ -33,7 +33,9 @@ public:
 	bool removeState(const std::string& name) override;
 	std::string getStartState() const override;
 	bool setStartState(const std::string& new_start_state_name) override;
+	std::set<std::string> getAllStates() const override;
 	bool isStateAccepting(const std::string& s_name) const override;
+	void setStateAccepting(const std::string& s_name, bool is_accepting) const override;
 	bool stateExists(const std::string& s_name) const override;
 	std::set<std::string> getEClosure(const std::set<std::string>& state_set) const;
 	bool addTransition(const std::string& s1_name, const std::string& s2_name, char a) override;
@@ -46,9 +48,9 @@ public:
 	void clear() override;
 
 	/* Modified subset construction */
-	DFA toDFA();
-	NFA toNFA(); // new algorithm
-	RE toRE(); // finished
+	DFA toDFA() const;
+	NFA toNFA() const; // new algorithm
+	RE toRE() const; // finished
 
 	void printStats() const override;
 	bool isLegal() const override;

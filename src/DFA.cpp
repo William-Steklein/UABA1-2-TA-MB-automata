@@ -114,6 +114,11 @@ std::string DFA::getStartState() const
 	return start_state->name;
 }
 
+std::set<std::string> DFA::getAcceptingStates() const
+{
+	return std::set<std::string>();
+}
+
 bool DFA::setStartState(const std::string& new_start_state_name)
 {
 	State* new_start_state = getState(new_start_state_name);
@@ -124,6 +129,14 @@ bool DFA::setStartState(const std::string& new_start_state_name)
 	return true;
 }
 
+std::set<std::string> DFA::getAllStates() const
+{
+	std::set<std::string> all_states;
+	for (const auto& state : states)
+		all_states.insert(state.first);
+	return all_states;
+}
+
 bool DFA::isStateAccepting(const std::string& s_name) const
 {
 	if (stateExists(s_name))
@@ -131,6 +144,13 @@ bool DFA::isStateAccepting(const std::string& s_name) const
 	else
 		std::cerr << "Error: DFA " << getID() << " state \"" + s_name + "\" doesn't exists" << std::endl;
 	return false;
+}
+
+void DFA::setStateAccepting(const std::string& s_name, bool is_accepting) const
+{
+	State* s = getState(s_name);
+	if (s != nullptr)
+		s->accepting = is_accepting;
 }
 
 bool DFA::stateExists(const std::string& s_name) const
@@ -176,7 +196,7 @@ bool DFA::removeTransition(const std::string& s_name, char a)
 std::set<std::string> DFA::transitionFunction(const std::string& s_name, char a) const
 {
 	if (getState(s_name)->transitions[a] != nullptr)
-		return {getState(s_name)->transitions[a]->name};
+		return { getState(s_name)->transitions[a]->name };
 	else
 		return {};
 }
@@ -227,7 +247,7 @@ void DFA::clear()
 
 void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 {
-	std::pair<std::string, std::string> pair_of_input_states = {dfa1.getStartState(), dfa2.getStartState()};
+	std::pair<std::string, std::string> pair_of_input_states = { dfa1.getStartState(), dfa2.getStartState() };
 	std::pair<std::string, std::string> pair_of_output_states;
 	std::vector<std::pair<std::string, std::string>> pairs_of_input_states;
 	std::vector<std::pair<std::string, std::string>> new_pairs_of_input_states;
@@ -265,10 +285,12 @@ void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 			{
 				if (intersection)
 					addState(new_state_name,
-						dfa1.isStateAccepting(pair_of_output_states.first) && dfa2.isStateAccepting(pair_of_output_states.second));
+						dfa1.isStateAccepting(pair_of_output_states.first)
+							&& dfa2.isStateAccepting(pair_of_output_states.second));
 				else
 					addState(new_state_name,
-						dfa1.isStateAccepting(pair_of_output_states.first) || dfa2.isStateAccepting(pair_of_output_states.second));
+						dfa1.isStateAccepting(pair_of_output_states.first)
+							|| dfa2.isStateAccepting(pair_of_output_states.second));
 
 				new_pairs_of_input_states.push_back(pair_of_output_states);
 			}
@@ -282,20 +304,164 @@ void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 	isLegal();
 }
 
-NFA DFA::toNFA()
+NFA DFA::toNFA() const
 {
 	return NFA();
 }
 
-ENFA DFA::toENFA()
+ENFA DFA::toENFA() const
 {
 	return ENFA();
 }
 
-RE DFA::toRE()
+RE DFA::toRE() const
 {
-	return RE();
+	std::set<std::string> states_to_eliminate = getAllStates();
+	std::set<std::string> accepting_states;
+	std::map<std::string, std::map<std::string, RE*>> current_transitions = transitionsToRE();
+
+	for (const auto& state : states_to_eliminate)
+	{
+		if (isStateAccepting(state))
+			accepting_states.insert(state);
+	}
+
+	std::string accepting_state = *accepting_states.begin();
+
+	// remove startstate and acceptingstate from states_to_eliminate
+	states_to_eliminate.erase(getStartState());
+	states_to_eliminate.erase(accepting_state);
+
+	for (const auto& elistate : states_to_eliminate)
+	{
+		for (auto& inputtransition : getInputTransitionsRE(current_transitions, elistate))
+		{
+			for (auto& outputtransition : current_transitions[elistate])
+			{
+				// if outputtransition == elistate
+				if (outputtransition.first == elistate)
+					continue;
+
+				std::vector<RE*> REs;
+
+				// get transition from inputstate to elistate
+				REs.push_back(inputtransition.second);
+
+				// get the loop transition on elistate if it exists
+				// if multiple loops then do union
+				if (getLoopsRE(current_transitions, elistate))
+				{
+					RE* new_RE = new RE;
+					new_RE->kleeneStarRE(getLoopsRE(current_transitions, elistate));
+					REs.push_back(new_RE);
+				}
+
+				// get transition from elistate to outputtransition
+				REs.push_back(outputtransition.second);
+
+				// concatenate
+				RE* new_RE2 = new RE;
+				new_RE2->concatenateRE(REs);
+
+				// put in current_transitions
+				if (current_transitions[inputtransition.first].find(outputtransition.first) != current_transitions[inputtransition.first].end())
+				{
+					RE* new_new_RE = new RE;
+					new_new_RE->unionRE( { current_transitions[inputtransition.first][outputtransition.first], new_RE2 } );
+					current_transitions[inputtransition.first][outputtransition.first] = new_new_RE;
+				}
+				else
+					current_transitions[inputtransition.first][outputtransition.first] = new_RE2;
+			}
+		}
+		// remove elistate
+		current_transitions.erase((current_transitions.find(elistate)));
+	}
+
+	// ((R+S(U*)T)*)S(U*)
+	RE* RE_R = getLoopsRE(current_transitions, getStartState());
+
+	RE* RE_S = current_transitions[getStartState()][accepting_state];
+	RE* RE_T = current_transitions[accepting_state][getStartState()];
+
+	RE* RE_U = getLoopsRE(current_transitions, accepting_state);
+
+	RE* RE_U_star = new RE;
+	RE_U_star->kleeneStarRE(RE_U);
+
+	RE* RE_S_concat_U_star = new RE;
+	RE_S_concat_U_star->concatenateRE({ RE_S, RE_U_star });
+
+	RE* RE_S_concat_U_star_T = new RE;
+	RE_S_concat_U_star_T->concatenateRE({ RE_S_concat_U_star, RE_T });
+
+	RE* RE_R_plus_other = new RE;
+	RE_R_plus_other->unionRE({ RE_R, RE_S_concat_U_star_T });
+
+	RE* RE_R_plus_other_star = new RE;
+	RE_R_plus_other_star->kleeneStarRE(RE_R_plus_other);
+
+	RE final_RE;
+	final_RE.concatenateRE({ RE_R_plus_other_star, RE_S_concat_U_star});
+
+	final_RE.setAlphabet(getAlphabet());
+	final_RE.setEpsilon('e');
+
+	return final_RE;
 }
+
+//RE DFA::toRERec(const std::string& current_state, const std::string& end_state, std::set<std::string>& visited_states)
+//{
+//	RE regex;
+//	RE result_regex;
+//	RE child_regex;
+//	std::vector<RE*> child_regexes;
+//	std::string next_state;
+//
+//	if (visited_states.find(current_state) != visited_states.end())
+//		return regex;
+//	visited_states.insert(current_state);
+//
+//	// add
+//
+//	for (char a : getAlphabet())
+//	{
+//		next_state = *transitionFunction(current_state, a).begin();
+//
+//		if (next_state == end_state)
+//		{
+//			// no recursion
+//
+//			// make var f
+//			child_regex.varRE(a);
+//		}
+//		else if (next_state == current_state)
+//		{
+//			RE temp_regex1;
+//			temp_regex1.varRE(a);
+//			child_regex.kleeneStarRE(&temp_regex1);
+//		}
+//		else
+//		{
+//			// yes recursion
+//
+//			RE temp_regex1;
+//			temp_regex1.varRE(a);
+//
+//			RE temp_regex2 = toRERec(*transitionFunction(current_state, a).begin(), end_state, visited_states);
+//			child_regex.concatenateRE({ &temp_regex1, &temp_regex2 });
+//		}
+//
+//		if (!child_regex.empty())
+//			child_regexes.push_back(&child_regex);
+//	}
+//
+//	// if there are more than one child regex then do union of them
+//	if (child_regexes.size() > 1)
+//		regex.unionRE(child_regexes);
+//
+//	return regex;
+//}
 
 void DFA::printStats() const
 {
@@ -403,4 +569,97 @@ DFA::State* DFA::getState(const std::string& name, bool error_output) const
 	if (error_output)
 		std::cerr << "Error: couldn't find state with name \"" << name << "\"" << std::endl;
 	return nullptr;
+}
+
+std::set<std::string> DFA::getInputStates(const std::string& s_name) const
+{
+	std::set<std::string> input_states;
+
+	for (const auto& state : getAllStates())
+	{
+		for (char symbol : getAlphabet())
+		{
+			if (*transitionFunction(state, symbol).begin() == s_name)
+				input_states.insert(*transitionFunction(state, symbol).begin());
+		}
+	}
+
+	return input_states;
+}
+
+std::set<std::string> DFA::getOutputStates(const std::string& s_name) const
+{
+	std::set<std::string> output_states;
+
+	for (char symbol : getAlphabet())
+		output_states.insert(*transitionFunction(s_name, symbol).begin());
+
+	return output_states;
+}
+
+std::map<std::string, std::map<std::string, RE*>> DFA::transitionsToRE() const
+{
+	std::map<std::string, std::map<std::string, RE*>> new_transitions;
+
+	for (const auto& state : getAllStates())
+	{
+		for (char symbol : getAlphabet())
+		{
+			RE* new_RE = new RE;
+			new_RE->load(std::string(1, symbol), 'e');
+			if (new_transitions[state].find(*transitionFunction(state, symbol).begin()) != new_transitions[state].end())
+			{
+				// union
+				RE* new_new_RE = new RE;
+				new_new_RE->unionRE({ new_transitions[state][*transitionFunction(state, symbol).begin()], new_RE });
+				new_transitions[state][*transitionFunction(state, symbol).begin()] = new_new_RE;
+			}
+			else
+			{
+				new_transitions[state][*transitionFunction(state, symbol).begin()] = new_RE;
+			}
+		}
+	}
+
+	return new_transitions;
+}
+
+std::map<std::string, RE*> DFA::getInputTransitionsRE(const std::map<std::string,
+																	std::map<std::string, RE*>>& transitionsRE,
+	const std::string& target_state)
+{
+	std::map<std::string, RE*> input_transitions;
+
+	for (const auto& input_transition : transitionsRE)
+	{
+		for (const auto& output_transition : input_transition.second)
+		{
+			if (output_transition.first == target_state)
+				input_transitions[input_transition.first] = output_transition.second;
+		}
+	}
+
+	return input_transitions;
+}
+
+RE* DFA::getLoopsRE(std::map<std::string, std::map<std::string, RE*>>& transitionsRE,
+	const std::string& target_state)
+{
+	std::vector<RE*> loops_regexes;
+
+	for (auto& output_transition : transitionsRE[target_state])
+	{
+		if (output_transition.first == target_state)
+			loops_regexes.push_back(output_transition.second);
+	}
+
+	if (loops_regexes.size() > 1)
+	{
+		RE* new_RE = new RE;
+		new_RE->unionRE(loops_regexes);
+	}
+	else if(loops_regexes.size() == 1)
+		return loops_regexes[0];
+	else
+		return nullptr;
 }

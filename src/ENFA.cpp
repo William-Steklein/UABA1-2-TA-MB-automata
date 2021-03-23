@@ -146,9 +146,24 @@ bool ENFA::setStartState(const std::string& new_start_state_name)
 	return true;
 }
 
+std::set<std::string> ENFA::getAllStates() const
+{
+	std::set<std::string> all_states;
+	for (const auto& state : states)
+		all_states.insert(state.first);
+	return all_states;
+}
+
 bool ENFA::isStateAccepting(const std::string& s_name) const
 {
 	return getState(s_name)->accepting;
+}
+
+void ENFA::setStateAccepting(const std::string& s_name, bool is_accepting) const
+{
+	State* s = getState(s_name);
+	if (s != nullptr)
+		s->accepting = is_accepting;
 }
 
 bool ENFA::stateExists(const std::string& s_name) const
@@ -269,7 +284,7 @@ bool ENFA::accepts(const std::string& string_w) const
 		if (set_of_output_states.empty())
 			return false;
 
-		set_of_input_states = set_of_output_states;
+		set_of_input_states = getEClosure(set_of_output_states);
 		set_of_output_states.clear();
 	}
 
@@ -289,7 +304,7 @@ void ENFA::clear()
 	start_state = nullptr;
 }
 
-DFA ENFA::toDFA()
+DFA ENFA::toDFA() const
 {
 	DFA dfa;
 	std::vector<std::set<std::string>> sets_of_input_states;
@@ -358,12 +373,12 @@ DFA ENFA::toDFA()
 	return dfa;
 }
 
-NFA ENFA::toNFA()
+NFA ENFA::toNFA() const
 {
 	return NFA();
 }
 
-RE ENFA::toRE()
+RE ENFA::toRE() const
 {
 	return toDFA().toRE();
 }
