@@ -1,15 +1,12 @@
-#ifndef TA_AUTOMATA_SRC_RE_H
-#define TA_AUTOMATA_SRC_RE_H
+#ifndef UABA1_TA_AUTOMATA2__RE_H
+#define UABA1_TA_AUTOMATA2__RE_H
 
 class DFA;
 class NFA;
 class ENFA;
 
-class RE
+class RE : public Alphabet
 {
-	std::set<char> alphabet;
-	char epsilon;
-
 	enum NodeType
 	{
 		var, plus, dot, star
@@ -17,37 +14,16 @@ class RE
 
 	struct RENode
 	{
-		NodeType nodetype = var;
-		char symbol = ' ';
 		RENode* parent = nullptr;
 		std::vector<RENode*> children;
 		int node_id = 0;
+		NodeType nodetype = var;
+		char symbol = ' ';
 
-		// copy assignment
-		RENode& operator=(RENode other)
-		{
-//			std::cout << "Copying RENode" << std::endl;
-			nodetype = other.nodetype;
-			symbol = other.symbol;
-			parent = other.parent;
-
-			for (const auto& child : other.children)
-			{
-				RENode* new_child = new RENode;
-				*new_child = *child;
-				children.push_back(new_child);
-			}
-
-			node_id = other.node_id;
-
-			return *this;
-		}
+		RENode& operator=(RENode _renode);
 	};
 	RENode* start_node = nullptr;
 	int nr_of_nodes = 0;
-
-	int ID;
-	static int nextID;
 
 public:
 	RE();
@@ -59,20 +35,16 @@ public:
 	void print() const;
 	bool empty() const;
 
-	void setAlphabet(const std::set<char>& _alphabet);
-	void setEpsilon(char _epsilon);
-
 	void varRE(char symbol);
 	void unionRE(const std::vector<RE*>& regexes);
 	void concatenateRE(const std::vector<RE*>& regexes);
-	void kleeneStarRE(RE* regex);
+	void kleeneStar();
 
 	DFA toDFA() const; // finished
 	NFA toNFA() const; // finished
 	/* regex -> ENFA */
 	ENFA toENFA() const;
 
-	int getID() const;
 	std::string genDOT() const;
 	bool genImage() const;
 
@@ -87,7 +59,7 @@ private:
 		RENode* current_node,
 		int nr_of_enfanodes = 0) const;
 	int resetRENodeIDs(RENode* current_node, bool is_start = true);
-
+	void unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_type);
 };
 
-#endif //TA_AUTOMATA_SRC_RE_H
+#endif

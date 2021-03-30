@@ -1,63 +1,22 @@
-#ifndef TA_AUTOMATA_SRC_ENFA_H
-#define TA_AUTOMATA_SRC_ENFA_H
+#ifndef UABA1_TA_AUTOMATA2__ENFA_H
+#define UABA1_TA_AUTOMATA2__ENFA_H
 
 #include "Automaton.h"
 
-class DFA;
-class NFA;
-class RE;
-
 class ENFA : public Automaton
 {
-	struct State
-	{
-		std::string name;
-		std::map<char, std::set<State*>> transitions;
-		bool accepting = false;
-	};
-	std::map<std::string, State*> states;
-	State* start_state = nullptr;
-	char epsilon;
-
-public:
-	ENFA();
-	ENFA(const std::string& json_filename);
-	~ENFA();
-
-	bool load(const std::string& filename) override;
+	bool load(const std::string& filename);
 	json save() const override;
 
-	bool setEpsilon(char new_epsilon);
-	char getEpsilon() const;
-	void addState(const std::string& name, bool is_accepting) override;
-	bool removeState(const std::string& name) override;
-	std::string getStartState() const override;
-	bool setStartState(const std::string& new_start_state_name) override;
-	std::set<std::string> getAllStates() const override;
-	bool isStateAccepting(const std::string& s_name) const override;
-	void setStateAccepting(const std::string& s_name, bool is_accepting) const override;
-	bool stateExists(const std::string& s_name) const override;
-	std::set<std::string> getEClosure(const std::set<std::string>& state_set) const;
-	bool addTransition(const std::string& s1_name, const std::string& s2_name, char a) override;
-	/* removes all transitions from state s_name with symbol a */
-	bool removeTransition(const std::string& s_name, char a) override;
-	/* removes a transition */
-	bool removeSingleTransition(const std::string& s1_name, const std::string& s2_name, char a);
-	std::set<std::string> transitionFunction(const std::string& s_name, char a) const override;
-	bool accepts(const std::string& string_w) const override;
-	void clear() override;
+public:
+	ENFA() = default;
+	ENFA(const std::string& json_filename);
 
-	/* Modified subset construction */
 	DFA toDFA() const;
-	NFA toNFA() const; // new algorithm
-	RE toRE() const; // finished
+	NFA toNFA() const;
+	RE toRE() const;
 
-	void printStats() const override;
 	bool isLegal() const override;
-	std::string genDOT() const override;
-
-private:
-	State* getState(const std::string& name, bool error_output = true) const;
 };
 
-#endif //TA_AUTOMATA_SRC_ENFA_H
+#endif

@@ -5,16 +5,36 @@
 
 const std::string DOT_IMAGES_PATH = "../DOT_images/";
 const std::string DOT_FILES_PATH = "../DOT_files/";
-int RE::nextID = 0;
+
+RE::RENode& RE::RENode::operator=(RE::RENode _renode)
+{
+	{
+		if (&_renode != this)
+		{
+			nodetype = _renode.nodetype;
+			symbol = _renode.symbol;
+			parent = _renode.parent;
+
+			for (const auto& child : _renode.children)
+			{
+				RENode* new_child = new RENode;
+				*new_child = *child;
+				children.push_back(new_child);
+			}
+
+			node_id = _renode.node_id;
+		}
+
+		return *this;
+	}
+}
 
 RE::RE()
 {
-	ID = nextID++;
 }
 
 RE::RE(const std::string& regex_string, char epsilon)
 {
-	ID = nextID++;
 	load(regex_string, epsilon);
 }
 
@@ -37,7 +57,8 @@ void RE::deleteNode(RE::RENode* current_node)
 
 bool RE::load(const std::string& regex_string, char _epsilon)
 {
-	epsilon = _epsilon;
+	setEpsilon(_epsilon);
+	addSymbol(_epsilon);
 	start_node = parse(regex_string, _epsilon);
 
 	if (start_node)
@@ -62,16 +83,15 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 	if (regex_string.size() == 1)
 	{
 		RENode* node = new RENode{
-			var,
-			regex_string[0],
 			nullptr,
 			{},
-			nr_of_nodes };
+			nr_of_nodes,
+			var,
+			regex_string[0] };
 
 		nr_of_nodes++;
 
-		if (regex_string[0] != eps)
-			alphabet.insert(regex_string[0]);
+		addSymbol(regex_string[0]);
 
 		return node;
 	}
@@ -80,11 +100,11 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 	if (regex_string.size() == 2 && regex_string.back() == '*')
 	{
 		RENode* node = new RENode{
-			star,
-			' ',
 			nullptr,
 			{ parse(regex_string.substr(0, 1), eps) },
-			nr_of_nodes };
+			nr_of_nodes,
+			star,
+			' ' };
 
 		nr_of_nodes++;
 
@@ -97,11 +117,11 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 		&& isValidRE(regex_string.substr(1, regex_string.size() - 3)))
 	{
 		RENode* node = new RENode{
-			star,
-			' ',
 			nullptr,
 			{ parse(regex_string.substr(1, regex_string.size() - 3), eps) },
-			nr_of_nodes };
+			nr_of_nodes,
+			star,
+			' ' };
 
 		nr_of_nodes++;
 		node->children[0]->parent = node;
@@ -316,23 +336,21 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 		for (const auto& subtree : string_list)
 		{
 			if (!subtree.empty())
-				children.push_back(parse(subtree, epsilon));
+				children.push_back(parse(subtree, getEpsilon()));
 		}
 
 		RENode* node = new RENode{
-			plus,
-			' ',
 			nullptr,
 			children,
-			nr_of_nodes };
+			nr_of_nodes,
+			plus,
+			' ' };
 
 		nr_of_nodes++;
 
 		// link children with parent
 		for (const auto& child : node->children)
-		{
 			child->parent = node;
-		}
 
 		return node;
 	}
@@ -347,15 +365,15 @@ RE::RENode* RE::parse(const std::string& regex_string2, char eps)
 		for (const auto& dot_subtree : dotstring_list)
 		{
 			if (!dot_subtree.empty())
-				children.push_back(parse(dot_subtree, epsilon));
+				children.push_back(parse(dot_subtree, getEpsilon()));
 		}
 
 		RENode* node = new RENode{
-			dot,
-			' ',
 			nullptr,
 			children,
-			nr_of_nodes };
+			nr_of_nodes,
+			dot,
+			' ' };
 
 		nr_of_nodes++;
 
@@ -388,122 +406,70 @@ bool RE::empty() const
 	return false;
 }
 
-void RE::setAlphabet(const std::set<char>& _alphabet)
-{
-	alphabet = _alphabet;
-}
-
-void RE::setEpsilon(char _epsilon)
-{
-	epsilon = _epsilon;
-}
-
 void RE::varRE(char symbol)
 {
 	deleteNode(start_node);
 
-	start_node = new RENode{ var,
-							 symbol,
-							 nullptr,
+	start_node = new RENode{ nullptr,
 							 {},
-							 0 };
+							 0,
+							 var,
+							 symbol };
 }
 
 void RE::unionRE(const std::vector<RE*>& regexes)
 {
-	std::vector<RE*> regexes2;
-	for (const auto& regex : regexes)
-	{
-		if (regex && !regex->empty())
-			regexes2.push_back(regex);
-	}
-	if (regexes2.empty())
-	{
-		std::cerr << "Error: empty union" << std::endl;
-		return;
-	}
-	else if (regexes2.size() == 1)
-	{
-		start_node = regexes2[0]->start_node;
-		return;
-	}
-
-	deleteNode(start_node);
-
-	start_node = new RENode{ plus,
-							 ' ',
-							 nullptr,
-							 {},
-							 0 };
-
-	for (const auto& regex : regexes)
-	{
-		if (regex->start_node->nodetype != plus)
-		{
-			RENode* new_child = new RENode;
-			new_child = regex->start_node;
-
-			new_child->parent = start_node;
-			start_node->children.push_back(new_child);
-		}
-		else
-		{
-			for (const auto& child_regex : regex->start_node->children)
-			{
-				RENode* new_child = new RENode;
-				new_child = child_regex;
-
-				child_regex->parent = start_node;
-				start_node->children.push_back(new_child);
-			}
-		}
-	}
-
-	resetRENodeIDs(start_node);
+	unionOrConcatenation(regexes, dot);
 }
 
 void RE::concatenateRE(const std::vector<RE*>& regexes)
 {
-	std::vector<RE*> regexes2;
+	unionOrConcatenation(regexes, plus);
+}
+
+void RE::unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_type)
+{
+	std::vector<RENode*> start_nodes;
+	if (!empty())
+		start_nodes.push_back(start_node);
+
 	for (const auto& regex : regexes)
 	{
 		if (regex && !regex->empty())
-		{
-			regexes2.push_back(regex);
-		}
+			start_nodes.push_back(regex->start_node);
 	}
-	if (regexes2.empty())
+	if (start_nodes.empty())
 	{
-		std::cerr << "Error: empty concatenation" << std::endl;
+		std::string node_type_string = node_type==dot ? "union" : "concatenation";
+		std::cerr << "Error: empty " + node_type_string << std::endl;
 		return;
 	}
-	else if (regexes2.size() == 1)
+	else if (start_nodes.size() == 1)
 	{
-		start_node = regexes2[0]->start_node;
+		start_node = new RENode;
+		*start_node = *start_nodes[0];
 		return;
 	}
 
-	deleteNode(start_node);
-
-	start_node = new RENode{ dot,
-							 ' ',
-							 nullptr,
+	start_node = new RENode{ nullptr,
 							 {},
-							 0 };
+							 0,
+							 node_type,
+							 ' '};
 
-	for (const auto& regex : regexes2)
+	for (const auto& node : start_nodes)
 	{
-		if (regex->start_node->nodetype != dot)
+		if (node->nodetype != node_type)
 		{
 			RENode* new_child = new RENode;
-			*new_child = *regex->start_node;
+			*new_child = *node;
 
 			new_child->parent = start_node;
 			start_node->children.push_back(new_child);
 		}
 		else
 		{
-			for (const auto& child_regex : regex->start_node->children)
+			for (const auto& child_regex : node->children)
 			{
 				RENode* new_child = new RENode;
 				*new_child = *child_regex;
@@ -517,21 +483,24 @@ void RE::concatenateRE(const std::vector<RE*>& regexes)
 	resetRENodeIDs(start_node);
 }
 
-void RE::kleeneStarRE(RE* regex)
+void RE::kleeneStar()
 {
-	if (!regex || regex->empty())
+	if (empty())
 	{
 		std::cerr << "Error: kleene star on empty regex" << std::endl;
 		return;
 	}
-	deleteNode(start_node);
 
-	regex->start_node->parent = start_node;
-	start_node = new RENode{ star,
-							 ' ',
-							 nullptr,
-							 { regex->start_node },
-							 0 };
+	if (start_node->nodetype == star)
+		return;
+
+	RENode* child_node = start_node;
+
+	start_node = new RENode{ nullptr,
+							 { child_node },
+							 0,
+							 star,
+							 ' '};
 
 	resetRENodeIDs(start_node);
 }
@@ -585,8 +554,8 @@ NFA RE::toNFA() const
 ENFA RE::toENFA() const
 {
 	ENFA enfa;
-	enfa.setAlphabet(alphabet);
-	enfa.setEpsilon(epsilon);
+	enfa.setAlphabet(getAlphabet());
+	enfa.setEpsilon(getEpsilon());
 	std::tuple<std::string, std::string, int> return_tuple = toENFARec(enfa, start_node);
 	enfa.setStartState(std::get<0>(return_tuple));
 	enfa.setStateAccepting(std::get<1>(return_tuple), true);
@@ -677,11 +646,6 @@ std::tuple<std::string, std::string, int> RE::toENFARec(ENFA& enfa,
 	}
 
 	return { start_state, end_state, current_nr_of_enfanodes };
-}
-
-int RE::getID() const
-{
-	return ID;
 }
 
 std::string RE::genDOTRec(RE::RENode* current_node) const
