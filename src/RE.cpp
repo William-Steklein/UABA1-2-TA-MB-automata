@@ -670,6 +670,28 @@ std::string RE::genDOTRec(RE::RENode* current_node) const
 	return dot_string;
 }
 
+bool RE::isLegal(RENode* node, bool start) const
+{
+	bool is_legal = true;
+	RENode* current_node;
+
+	if (start)
+		current_node = start_node;
+	else
+		current_node = node;
+
+	if (node->nodetype == star && node->children.size() > 1)
+		*getOutputStream() << "Error: RE " << getID() << " has a star node with more than 1 children" << std::endl;
+
+	for (const auto& child : current_node->children)
+	{
+		if (node->nodetype == star && child->nodetype == star)
+			*getOutputStream() << "Error: RE " << getID() << " has a star node under a star node" << std::endl;
+	}
+
+	return is_legal;
+}
+
 std::string RE::genDOT() const
 {
 	std::string dot;

@@ -68,6 +68,12 @@ bool Automaton::loadBasicComponents(const std::string& filename, const json& aut
 		addSymbol(symbol.get<std::string>()[0]);
 	}
 
+	if (automaton_json.contains("eps"))
+    {
+        setEpsilon(automaton_json["eps"].get<std::string>()[0]);
+        addSymbol(automaton_json["eps"].get<std::string>()[0]);
+    }
+
 	for (const auto& state : automaton_json["states"])
 	{
 		addState(state["name"].get<std::string>(), state["accepting"].get<bool>());

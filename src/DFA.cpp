@@ -17,6 +17,12 @@ bool DFA::load(const std::string& filename)
 		return false;
 	}
 
+	if (DFA_json.contains("eps"))
+	{
+		*getOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
+		return false;
+	}
+
 	return Automaton::loadBasicComponents(filename, DFA_json);
 }
 

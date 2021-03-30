@@ -102,7 +102,15 @@ TEST_F(AutomataTests, basic_functionality)
 	EXPECT_FALSE(dfa0.addTransition("Q1", "Q0", '1'));
 	EXPECT_TRUE(dfa0.isLegal());
 
-	EXPECT_EQ("{Q2}", DFA::getSetOfStatesString(dfa0.transition(dfa0.getStartState(), '1')));
+    EXPECT_EQ("{Q1,Q2}", DFA::getSetOfStatesString(dfa0.getAllStates()));
+    dfa0.renameStates(true);
+    EXPECT_EQ("{A,B}", DFA::getSetOfStatesString(dfa0.getAllStates()));
+    EXPECT_TRUE(dfa0.isLegal());
+    dfa0.renameStates(false);
+    EXPECT_EQ("{0,1}", DFA::getSetOfStatesString(dfa0.getAllStates()));
+    EXPECT_TRUE(dfa0.isLegal());
+
+	EXPECT_EQ("{1}", DFA::getSetOfStatesString(dfa0.transition(dfa0.getStartState(), '1')));
 
 	// DFA
 	DFA dfa1("../src/testing/testInput/basic_functionality/DFA1.json");
@@ -120,26 +128,49 @@ TEST_F(AutomataTests, basic_functionality)
 
 	EXPECT_EQ(' ', dfa1.getEpsilon());
 
-	EXPECT_EQ("{Q0,Q1}", DFA::getSetOfStatesString(dfa1.getAllStates()));
-	dfa1.renameStates(true);
-	EXPECT_EQ("{A,B}", DFA::getSetOfStatesString(dfa1.getAllStates()));
-	EXPECT_TRUE(dfa1.isLegal());
-	dfa1.renameStates(false);
-	EXPECT_EQ("{0,1}", DFA::getSetOfStatesString(dfa1.getAllStates()));
-	EXPECT_TRUE(dfa1.isLegal());
-
-	dfa1.genImage();
-
 	dfa1.clear();
 
 	EXPECT_FALSE(dfa1.isLegal());
 	EXPECT_EQ("", dfa1.getStartState());
 
 	// NFA
+    NFA nfa1("../src/testing/testInput/basic_functionality/NFA1.json");
+    nfa1.setOutputStream(bitBucket);
+    EXPECT_TRUE(nfa1.isLegal());
+    EXPECT_EQ(2, nfa1.getID());
 
-	// ENFA
+    EXPECT_TRUE(nfa1.accepts("c"));
+    EXPECT_TRUE(nfa1.accepts("ccc"));
+    EXPECT_TRUE(nfa1.accepts("cccc"));
+    EXPECT_FALSE(nfa1.accepts("cc"));
+    EXPECT_FALSE(nfa1.accepts("ccccc"));
+
+    EXPECT_TRUE(nfa1.removeState("4"));
+    EXPECT_TRUE(nfa1.isLegal());
+
+    EXPECT_EQ(' ', dfa1.getEpsilon());
+    nfa1.setEpsilon('*');
+    EXPECT_FALSE(nfa1.isLegal());
+
+    // ENFA
+    ENFA enfa1("../src/testing/testInput/basic_functionality/ENFA1.json");
+    enfa1.setOutputStream(bitBucket);
+    EXPECT_TRUE(enfa1.isLegal());
+    EXPECT_EQ(3, enfa1.getID());
+
+    EXPECT_TRUE(enfa1.accepts("k"));
+    EXPECT_TRUE(enfa1.accepts("j"));
+    EXPECT_TRUE(enfa1.accepts("jj"));
+    EXPECT_FALSE(enfa1.accepts("kj"));
+    EXPECT_FALSE(enfa1.accepts("jkj"));
+
+    EXPECT_EQ('*', enfa1.getEpsilon());
+    enfa1.setEpsilon(' ');
+    EXPECT_FALSE(enfa1.isLegal());
 
 	// RE
+	RE re1("(m+y)*+(e+y+m+i)s",'e');
+	EXPECT_TRUE(re1.isLegal());
 }
 
 TEST_F(AutomataTests, subset_construction)
