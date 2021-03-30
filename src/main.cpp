@@ -23,6 +23,8 @@
  *
  *
  * todo changes/other
+ * - make directory if it doesn't exists
+ * - fix deletefiles function so that it doesn't crash when the directory doesn't exists
  *
  */
 
@@ -45,6 +47,8 @@ int main()
 	std::cout << dfa.accepts("00000000000") << std::endl;
 	std::cout << dfa.accepts("00000100000") << std::endl;
 	std::cout << dfa.accepts("00100100000") << std::endl;
+
+	dfa.print();
 
 //	DFA dfa2("../automata_json/DFA2.json");
 //	dfa2.genImage();

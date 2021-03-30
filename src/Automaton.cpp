@@ -61,6 +61,8 @@ bool Automaton::loadBasicComponents(const std::string& filename, const json& aut
 		return false;
 	}
 
+	clear();
+
 	for (const auto& symbol : automaton_json["alphabet"])
 	{
 		addSymbol(symbol.get<std::string>()[0]);
@@ -120,9 +122,9 @@ json Automaton::saveBasicComponents() const
 	return automaton_json;
 }
 
-void Automaton::print() const
+void Automaton::print(std::ostream& output_stream) const
 {
-	std::cout << std::setw(4) << save() << std::endl;
+	output_stream << std::setw(4) << save() << std::endl;
 }
 
 void Automaton::addState(const std::string& name, bool is_accepting)
@@ -329,6 +331,9 @@ std::set<std::string> Automaton::eClosure(const std::set<std::string>& set_of_st
 	bool new_states_added = true;
 	std::set<std::string> current_set = set_of_states;
 
+	if (getEpsilon() == ' ')
+		return current_set;
+
 	while (new_states_added)
 	{
 		new_states_added = false;
@@ -423,26 +428,40 @@ void Automaton::printStats() const
 		std::cout << "degree[" << degree.first << "]=" << degree.second << std::endl;
 }
 
-void Automaton::renameStates()
+void Automaton::renameStates(bool letters)
 {
-	std::string alphaberta = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	int nr_of_letters = 1;
-	int current_letter = 0;
-
 	std::map<std::string, State*> new_states;
 
-	for (auto& state : states)
+	if (letters)
 	{
-		const std::string new_name = std::string(nr_of_letters, alphaberta.at(current_letter));
+		std::string alphaberta = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		int nr_of_letters = 1;
+		int current_letter = 0;
 
-		state.second->name = new_name;
-		new_states[new_name] = state.second;
-
-		current_letter++;
-		if (current_letter == 26)
+		for (auto& state : states)
 		{
-			current_letter = 0;
-			nr_of_letters++;
+			const std::string new_name = std::string(nr_of_letters, alphaberta.at(current_letter));
+
+			state.second->name = new_name;
+			new_states[new_name] = state.second;
+
+			current_letter++;
+			if (current_letter == 26)
+			{
+				current_letter = 0;
+				nr_of_letters++;
+			}
+		}
+	}
+	else
+	{
+		int new_name = 0;
+		for (auto& state : states)
+		{
+			state.second->name = std::to_string(new_name);
+			new_states[std::to_string(new_name)] = state.second;
+
+			new_name++;
 		}
 	}
 

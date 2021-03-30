@@ -38,17 +38,77 @@ TEST_F(AutomataTests, basic_functionality)
 	EXPECT_TRUE(dfa0.isLegal());
 	EXPECT_EQ(' ', dfa0.getEpsilon());
 
+	// Alphabet
+	std::set<char> _alphabet = { '0', '1' };
+	EXPECT_EQ(_alphabet, dfa0.getAlphabet());
+
+	dfa0.addSymbol('2');
+	EXPECT_FALSE(dfa0.isLegal());
+	_alphabet = { '0', '1', '2' };
+	EXPECT_EQ(_alphabet, dfa0.getAlphabet());
+
+	dfa0.removeSymbol('2');
+	EXPECT_TRUE(dfa0.isLegal());
+	_alphabet = { '0', '1' };
+	EXPECT_EQ(_alphabet, dfa0.getAlphabet());
+
 	dfa0.setEpsilon('*');
 	EXPECT_FALSE(dfa0.isLegal());
 
 	dfa0.setEpsilon(' ');
 	EXPECT_TRUE(dfa0.isLegal());
 
+	EXPECT_EQ(0, dfa0.getID());
 
+	// Automaton
+	dfa0.addState("Q2", true);
+	EXPECT_FALSE(dfa0.isLegal());
+
+	dfa0.addTransition("Q0", "Q2", '0');
+
+	EXPECT_FALSE(dfa0.isLegal());
+
+	dfa0.addTransition("Q2", "Q2", '0');
+	dfa0.addTransition("Q2", "Q2", '1');
+
+	EXPECT_TRUE(dfa0.isLegal());
+	EXPECT_TRUE(dfa0.accepts("1"));
+	EXPECT_FALSE(dfa0.accepts("11"));
+
+	dfa0.setStartState("Q1");
+
+	EXPECT_TRUE(dfa0.isLegal());
+	EXPECT_FALSE(dfa0.accepts("1"));
+	EXPECT_TRUE(dfa0.accepts("11"));
+
+	EXPECT_TRUE(dfa0.isStateAccepting(dfa0.getStartState()));
+	EXPECT_FALSE(dfa0.isStateAccepting("Q0"));
+	EXPECT_TRUE(dfa0.isSetOfStatesAccepting(dfa0.getAllStates()));
+
+	EXPECT_EQ("{Q0,Q1,Q2}", DFA::getSetOfStatesString(dfa0.getAllStates()));
+
+	EXPECT_EQ("{Q1,Q2}", DFA::getSetOfStatesString(dfa0.transitionSetOfStates({ "Q1", "Q0" }, '0')));
+
+	EXPECT_TRUE(dfa0.removeTransition("Q1", "Q0", '1'));
+	EXPECT_FALSE(dfa0.isLegal());
+
+	EXPECT_TRUE(dfa0.removeState("Q0"));
+	EXPECT_FALSE(dfa0.removeState("Q0"));
+	EXPECT_FALSE(dfa0.isLegal());
+
+	EXPECT_TRUE(dfa0.addTransition("Q1", "Q2", '1'));
+	EXPECT_TRUE(dfa0.isLegal());
+
+	EXPECT_FALSE(dfa0.addTransition("Q1", "Q0", '1'));
+	EXPECT_TRUE(dfa0.isLegal());
+
+	EXPECT_EQ("{Q2}", DFA::getSetOfStatesString(dfa0.transition(dfa0.getStartState(), '1')));
 
 	// DFA
 	DFA dfa1("../src/testing/testInput/basic_functionality/DFA1.json");
+	dfa1.setOutputStream(bitBucket);
 	EXPECT_TRUE(dfa1.isLegal());
+	EXPECT_EQ(1, dfa1.getID());
 
 	EXPECT_TRUE(dfa1.accepts("1"));
 	EXPECT_TRUE(dfa1.accepts("111"));
@@ -60,6 +120,20 @@ TEST_F(AutomataTests, basic_functionality)
 
 	EXPECT_EQ(' ', dfa1.getEpsilon());
 
+	EXPECT_EQ("{Q0,Q1}", DFA::getSetOfStatesString(dfa1.getAllStates()));
+	dfa1.renameStates(true);
+	EXPECT_EQ("{A,B}", DFA::getSetOfStatesString(dfa1.getAllStates()));
+	EXPECT_TRUE(dfa1.isLegal());
+	dfa1.renameStates(false);
+	EXPECT_EQ("{0,1}", DFA::getSetOfStatesString(dfa1.getAllStates()));
+	EXPECT_TRUE(dfa1.isLegal());
+
+	dfa1.genImage();
+
+	dfa1.clear();
+
+	EXPECT_FALSE(dfa1.isLegal());
+	EXPECT_EQ("", dfa1.getStartState());
 
 	// NFA
 

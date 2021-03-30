@@ -23,6 +23,15 @@ bool ENFA::load(const std::string& filename)
 		return false;
 	}
 
+	if (!(ENFA_json.contains("type") && ENFA_json.contains("alphabet")
+		  && ENFA_json.contains("states") && ENFA_json.contains("transitions")))
+	{
+		*getOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
+		return false;
+	}
+
+	clear();
+
 	setEpsilon(ENFA_json["eps"].get<std::string>()[0]);
 	addSymbol(ENFA_json["eps"].get<std::string>()[0]);
 

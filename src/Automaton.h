@@ -44,7 +44,7 @@ protected:
 
 public:
 	/* prints the automaton in json format */
-	void print() const;
+	void print(std::ostream& output_stream = std::cout) const;
 
 	void addState(const std::string& name, bool is_accepting);
 	bool removeState(const std::string& s_str);
@@ -78,7 +78,7 @@ public:
 	virtual void printStats() const;
 	/* Checks if the automaton is legal */
 	virtual bool isLegal() const = 0;
-	void renameStates();
+	void renameStates(bool letters = true);
 	std::string genDOT() const;
 	bool genImage() const;
 

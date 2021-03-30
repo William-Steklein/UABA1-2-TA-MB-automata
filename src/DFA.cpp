@@ -40,8 +40,15 @@ DFA::DFA(const DFA& dfa1, const DFA& dfa2, bool intersection)
 
 bool DFA::addTransition(const std::string& s1_str, const std::string& s2_str, char a)
 {
+
 	if (!transition(s1_str, a).empty())
 	{
+		if (!isSymbolInAlphabet(a))
+			return false;
+
+		if (!stateExists(s1_str) || !stateExists(s2_str))
+			return false;
+
 		*getOutputStream() << "Error: DFA " << getID() << ", overwriting transition δ(" << s1_str << ", " << a << ")"
 				  << std::endl;
 		removeTransitions(s1_str, a);
