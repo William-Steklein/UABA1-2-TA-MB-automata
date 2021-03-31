@@ -9,6 +9,7 @@ class Alphabet
 {
 	std::set<char> alphabet;
 	char epsilon;
+	static const char standard_epsilon = '*';
 
 	std::ostream* output_stream = &std::cerr;
 	int ID;
@@ -20,7 +21,7 @@ protected:
 
 	void incrementID();
 
-public:
+ public:
 	bool addSymbol(char symbol);
 	bool removeSymbol(char symbol);
 	bool isSymbolInAlphabet(char a) const;
@@ -31,6 +32,7 @@ public:
 	void clearAlphabet();
 	char getEpsilon() const;
 	void setEpsilon(char _epsilon);
+	static char getStandardEpsilon();
 
 	std::ostream* getOutputStream() const;
 	void setOutputStream(std::ostream& _output_stream);

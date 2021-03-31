@@ -59,8 +59,9 @@ public:
 	bool stateExists(const std::string& s_str) const;
 
 	virtual bool addTransition(const std::string& s1_str, const std::string& s2_str, char a);
-	bool removeTransitions(const std::string& s_str, char a);
+	virtual bool addTransitions(const std::string& s_str, const std::set<std::string>& output_states, char a);
 	bool removeTransition(const std::string& s1_str, const std::string& s2_str, char a);
+	bool removeTransitions(const std::string& s_str, char a);
 	std::set<std::string> transition(const std::string& s_str, char a) const;
 	std::set<std::string> transitionSetOfStates(const std::set<std::string>& set_of_states, char a) const;
 	std::set<std::string> eClosure(const std::set<std::string>& set_of_states) const;

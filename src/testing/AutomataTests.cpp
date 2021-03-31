@@ -170,12 +170,63 @@ TEST_F(AutomataTests, basic_functionality)
 
 	// RE
 	RE re1("(m+y)*+(e+y+m+i)s",'e');
+	re1.setOutputStream(bitBucket);
 	EXPECT_TRUE(re1.isLegal());
+	EXPECT_EQ("(m+y)*+(e+y+m+i)s", re1.save());
+
+	RE re2;
+	re2.setOutputStream(bitBucket);
+	EXPECT_FALSE(re2.isLegal());
+	re2.varRE('x');
+	EXPECT_TRUE(re2.isLegal());
+
+	re1.unionRE({ &re2 });
+	EXPECT_TRUE(re1.isLegal());
+	EXPECT_EQ("(m+y)*+(e+y+m+i)s+x", re1.save());
+
+	re1.concatenateRE({ &re2 });
+	EXPECT_TRUE(re1.isLegal());
+	EXPECT_EQ("((m+y)*+(e+y+m+i)s+x)x", re1.save());
+
+	re1.kleeneStar();
+	EXPECT_TRUE(re1.isLegal());
+	EXPECT_EQ("(((m+y)*+(e+y+m+i)s+x)x)*", re1.save());
+
+	re1.kleeneStar();
+	EXPECT_TRUE(re1.isLegal());
+	EXPECT_EQ("(((m+y)*+(e+y+m+i)s+x)x)*", re1.save());
+
+	// basic conversions
+	DFA dfa2("../src/testing/testInput/basic_functionality/DFA2.json");
+	EXPECT_TRUE(dfa2.isLegal());
+
+	NFA nfa2 = dfa2.toNFA();
+	EXPECT_TRUE(nfa2.isLegal());
+
+	ENFA enfa2 = dfa2.toENFA();
+	EXPECT_TRUE(enfa2.isLegal());
+
+	NFA nfa3("../src/testing/testInput/basic_functionality/NFA1.json");
+	EXPECT_TRUE(nfa3.isLegal());
+
+	ENFA enfa3 = nfa3.toENFA();
+	EXPECT_TRUE(enfa3.isLegal());
 }
 
 TEST_F(AutomataTests, subset_construction)
 {
+	NFA nfa1("../src/testing/testInput/subset_construction/NFA1.json");
+	EXPECT_TRUE(nfa1.isLegal());
 
+	DFA dfa1 = nfa1.toDFA();
+	EXPECT_TRUE(dfa1.isLegal());
+
+	nfa1.genImage();
+	dfa1.genImage();
+
+	// todo: add accepts
+
+	NFA nfa2("../src/testing/testInput/subset_construction/NFA2.json");
 }
 
 TEST_F(AutomataTests, modified_subset_construction)

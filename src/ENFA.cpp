@@ -114,12 +114,12 @@ DFA ENFA::toDFA() const
 
 NFA ENFA::toNFA() const
 {
-	return NFA();
+	return toDFA().toNFA();
 }
 
 RE ENFA::toRE() const
 {
-	return RE();
+	return toDFA().toRE();
 }
 
 bool ENFA::isLegal() const

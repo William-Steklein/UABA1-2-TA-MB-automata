@@ -8,25 +8,23 @@ const std::string DOT_FILES_PATH = "../DOT_files/";
 
 RE::RENode& RE::RENode::operator=(RE::RENode _renode)
 {
+	if (&_renode != this)
 	{
-		if (&_renode != this)
+		nodetype = _renode.nodetype;
+		symbol = _renode.symbol;
+		parent = _renode.parent;
+
+		for (const auto& child : _renode.children)
 		{
-			nodetype = _renode.nodetype;
-			symbol = _renode.symbol;
-			parent = _renode.parent;
-
-			for (const auto& child : _renode.children)
-			{
-				RENode* new_child = new RENode;
-				*new_child = *child;
-				children.push_back(new_child);
-			}
-
-			node_id = _renode.node_id;
+			RENode* new_child = new RENode;
+			*new_child = *child;
+			children.push_back(new_child);
 		}
 
-		return *this;
+		node_id = _renode.node_id;
 	}
+
+	return *this;
 }
 
 RE::RE()
@@ -419,12 +417,12 @@ void RE::varRE(char symbol)
 
 void RE::unionRE(const std::vector<RE*>& regexes)
 {
-	unionOrConcatenation(regexes, dot);
+	unionOrConcatenation(regexes, plus);
 }
 
 void RE::concatenateRE(const std::vector<RE*>& regexes)
 {
-	unionOrConcatenation(regexes, plus);
+	unionOrConcatenation(regexes, dot);
 }
 
 void RE::unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_type)
@@ -670,23 +668,39 @@ std::string RE::genDOTRec(RE::RENode* current_node) const
 	return dot_string;
 }
 
-bool RE::isLegal(RENode* node, bool start) const
+bool RE::isLegal(RENode* current_node, bool start) const
 {
 	bool is_legal = true;
-	RENode* current_node;
 
 	if (start)
+	{
 		current_node = start_node;
-	else
-		current_node = node;
+		if (!current_node)
+		{
+			*getOutputStream() << "Error: RE " << getID() << " has no start node" << std::endl;
+			return false;
+		}
+	}
 
-	if (node->nodetype == star && node->children.size() > 1)
+	if (current_node->nodetype == star && current_node->children.size() > 1)
+	{
 		*getOutputStream() << "Error: RE " << getID() << " has a star node with more than 1 children" << std::endl;
+		is_legal = false;
+	}
 
 	for (const auto& child : current_node->children)
 	{
-		if (node->nodetype == star && child->nodetype == star)
+		if (current_node->nodetype == star && child->nodetype == star)
+		{
 			*getOutputStream() << "Error: RE " << getID() << " has a star node under a star node" << std::endl;
+			is_legal = false;
+		}
+
+		if (current_node->nodetype == dot && child->nodetype == dot)
+		{
+			*getOutputStream() << "Error: RE " << getID() << " has a dot node under a dot node" << std::endl;
+			is_legal = false;
+		}
 	}
 
 	return is_legal;

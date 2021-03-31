@@ -15,6 +15,8 @@
  * 		- finish all conversions
  * 		- relook all algoritms and make tests
  *
+ * - RE fix concatenation child problem => user error handling
+ *
  * - change or remove epsilon in (DFA) transitionstoRE
  * - RE parser remove eps parameter and make a get epsilon function
  * - clean or rewrite RE parser

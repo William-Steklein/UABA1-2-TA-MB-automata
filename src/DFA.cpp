@@ -13,7 +13,7 @@ bool DFA::load(const std::string& filename)
 	if (DFA_json["type"] != "DFA")
 	{
 		*getOutputStream() << "Error: " << filename << " is of the type " << DFA_json["type"] << " and not DFA"
-				  << std::endl;
+						   << std::endl;
 		return false;
 	}
 
@@ -46,7 +46,6 @@ DFA::DFA(const DFA& dfa1, const DFA& dfa2, bool intersection)
 
 bool DFA::addTransition(const std::string& s1_str, const std::string& s2_str, char a)
 {
-
 	if (!transition(s1_str, a).empty())
 	{
 		if (!isSymbolInAlphabet(a))
@@ -56,21 +55,69 @@ bool DFA::addTransition(const std::string& s1_str, const std::string& s2_str, ch
 			return false;
 
 		*getOutputStream() << "Error: DFA " << getID() << ", overwriting transition δ(" << s1_str << ", " << a << ")"
-				  << std::endl;
+						   << std::endl;
 		removeTransitions(s1_str, a);
 	}
 
 	return Automaton::addTransition(s1_str, s2_str, a);
 }
 
+bool DFA::addTransitions(const std::string& s_str, const std::set<std::string>& output_states, char a)
+{
+	if (output_states.size() == 1)
+	{
+		return addTransition(s_str, *output_states.begin(), a);
+	}
+	else if (output_states.empty())
+	{
+		return true;
+	}
+
+	*getOutputStream() << "Error: DFA " << getID() << ", addTransitions: output_states contains more than one state"
+					   << std::endl;
+	return false;
+}
+
 NFA DFA::toNFA() const
 {
-	return NFA();
+	NFA nfa;
+
+	nfa.setAlphabet(getAlphabet());
+
+	for (const auto& state : getAllStates())
+		nfa.addState(state, isStateAccepting(state));
+
+	for (const auto& state : getAllStates())
+	{
+		for (char a : getAlphabet())
+			nfa.addTransition(state, *transition(state, a).begin(), a);
+	}
+
+	nfa.setStartState(getStartState());
+
+	return nfa;
 }
 
 ENFA DFA::toENFA() const
 {
-	return ENFA();
+	ENFA enfa;
+
+	enfa.setAlphabet(getAlphabet());
+	enfa.setEpsilon(Alphabet::getStandardEpsilon());
+	enfa.addSymbol(Alphabet::getStandardEpsilon());
+
+	for (const auto& state : getAllStates())
+		enfa.addState(state, isStateAccepting(state));
+
+	for (const auto& state : getAllStates())
+	{
+		for (char a : getAlphabet())
+			enfa.addTransition(state, *transition(state, a).begin(), a);
+	}
+
+	enfa.setStartState(getStartState());
+
+	return enfa;
 }
 
 RE DFA::toRE() const
@@ -246,15 +293,16 @@ bool DFA::isLegal() const
 
 			if (output_state.empty())
 			{
-				*getOutputStream() << "Error: DFA " << getID() << " has no transition from state " << state << " with symbol "
-						  << c << std::endl;
+				*getOutputStream() << "Error: DFA " << getID() << " has no transition from state " << state
+								   << " with symbol "
+								   << c << std::endl;
 				is_legal = false;
 			}
 
 			if (output_state.size() > 1)
 			{
 				*getOutputStream() << "Error: DFA " << getID() << " has multiple transitions from state " << state
-						  << " with symbol " << c << std::endl;
+								   << " with symbol " << c << std::endl;
 				is_legal = false;
 			}
 		}
@@ -262,7 +310,8 @@ bool DFA::isLegal() const
 
 	if (getEpsilon() != ' ')
 	{
-		*getOutputStream() << "Error: DFA " << getID() << " has an epsilon symbol '" << getEpsilon() << "'" << std::endl;
+		*getOutputStream() << "Error: DFA " << getID() << " has an epsilon symbol '" << getEpsilon() << "'"
+						   << std::endl;
 		is_legal = false;
 	}
 
@@ -330,7 +379,7 @@ RE* DFA::getLoopsRE(std::map<std::string, std::map<std::string, RE*>>& transitio
 		RE* new_RE = new RE;
 		new_RE->unionRE(loops_regexes);
 	}
-	else if(loops_regexes.size() == 1)
+	else if (loops_regexes.size() == 1)
 		return loops_regexes[0];
 
 	return nullptr;

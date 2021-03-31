@@ -45,7 +45,7 @@ DFA NFA::toDFA() const
 	std::vector<std::set<std::string>> sets_of_input_states;
 	std::vector<std::set<std::string>> new_sets_of_input_states;
 	std::set<std::string> set_of_output_states;
-	std::set<std::string> current_state;
+	std::set<std::string> current_set_of_input_states;
 	bool contains_empty_set = false;
 
 	dfa.setAlphabet(getAlphabet());
@@ -59,13 +59,13 @@ DFA NFA::toDFA() const
 	while (!sets_of_input_states.empty())
 	{
 		// takes a set of input states that hasn't been processed
-		current_state = sets_of_input_states.front();
+		current_set_of_input_states = sets_of_input_states.front();
 		sets_of_input_states.erase(sets_of_input_states.begin());
 
 		for (char a : getAlphabet())
 		{
 			// transitions
-			set_of_output_states = transitionSetOfStates(current_state, a);
+			set_of_output_states = transitionSetOfStates(current_set_of_input_states, a);
 
 			std::string new_state_name;
 
@@ -74,8 +74,8 @@ DFA NFA::toDFA() const
 			{
 				if (!contains_empty_set)
 				{
-					dfa.addState("{}", false);
 					contains_empty_set = true;
+					dfa.addState("{}", false);
 					for (char symbol : getAlphabet())
 						dfa.addTransition("{}", "{}", symbol);
 				}
@@ -92,8 +92,9 @@ DFA NFA::toDFA() const
 					new_sets_of_input_states.push_back(set_of_output_states);
 				}
 			}
-			dfa.addTransition(getSetOfStatesString(current_state), new_state_name, a);
+			dfa.addTransition(getSetOfStatesString(current_set_of_input_states), new_state_name, a);
 			set_of_output_states.clear();
+
 		}
 		sets_of_input_states
 			.insert(sets_of_input_states.end(), new_sets_of_input_states.begin(), new_sets_of_input_states.end());
@@ -106,12 +107,29 @@ DFA NFA::toDFA() const
 
 ENFA NFA::toENFA() const
 {
-	return ENFA();
+	ENFA enfa;
+
+	enfa.setAlphabet(getAlphabet());
+	enfa.setEpsilon(Alphabet::getStandardEpsilon());
+	enfa.addSymbol(Alphabet::getStandardEpsilon());
+
+	for (const auto& state : getAllStates())
+		enfa.addState(state, isStateAccepting(state));
+
+	for (const auto& state : getAllStates())
+	{
+		for (char a : getAlphabet())
+			enfa.addTransitions(state, transition(state, a), a);
+	}
+
+	enfa.setStartState(getStartState());
+
+	return enfa;
 }
 
 RE NFA::toRE() const
 {
-	return RE();
+	return toDFA().toRE();
 }
 
 bool NFA::isLegal() const

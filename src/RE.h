@@ -45,7 +45,7 @@ public:
 	/* regex -> ENFA */
 	ENFA toENFA() const;
 
-	bool isLegal(RENode* node, bool start = true) const;
+	bool isLegal(RENode* current_node = nullptr, bool start = true) const;
 	std::string genDOT() const;
 	bool genImage() const;
 

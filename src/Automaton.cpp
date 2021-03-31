@@ -55,7 +55,7 @@ json Automaton::loadJsonFile(const std::string& filename)
 bool Automaton::loadBasicComponents(const std::string& filename, const json& automaton_json)
 {
 	if (!(automaton_json.contains("type") && automaton_json.contains("alphabet")
-		&& automaton_json.contains("states") && automaton_json.contains("transitions")))
+		  && automaton_json.contains("states") && automaton_json.contains("transitions")))
 	{
 		*getOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
 		return false;
@@ -69,10 +69,10 @@ bool Automaton::loadBasicComponents(const std::string& filename, const json& aut
 	}
 
 	if (automaton_json.contains("eps"))
-    {
-        setEpsilon(automaton_json["eps"].get<std::string>()[0]);
-        addSymbol(automaton_json["eps"].get<std::string>()[0]);
-    }
+	{
+		setEpsilon(automaton_json["eps"].get<std::string>()[0]);
+		addSymbol(automaton_json["eps"].get<std::string>()[0]);
+	}
 
 	for (const auto& state : automaton_json["states"])
 	{
@@ -107,8 +107,8 @@ json Automaton::saveBasicComponents() const
 			is_start = true;
 
 		automaton_json["states"].push_back({
-			{ "name", state.first },
-			{ "starting", is_start },
+			{ "name",      state.first },
+			{ "starting",  is_start },
 			{ "accepting", state.second->accepting }
 		});
 
@@ -117,8 +117,8 @@ json Automaton::saveBasicComponents() const
 			for (const auto& state2 : transition.second)
 			{
 				automaton_json["transitions"].push_back({
-					{ "from", state.first },
-					{ "to", state2->name },
+					{ "from",  state.first },
+					{ "to",    state2->name },
 					{ "input", std::string(1, transition.first) }
 				});
 			}
@@ -266,7 +266,7 @@ bool Automaton::addTransition(const std::string& s1_str, const std::string& s2_s
 	return true;
 }
 
-bool Automaton::removeTransitions(const std::string& s_str, char a)
+bool Automaton::addTransitions(const std::string& s_str, const std::set<std::string>& output_states, char a)
 {
 	if (!isSymbolInAlphabet(a))
 		return false;
@@ -276,7 +276,17 @@ bool Automaton::removeTransitions(const std::string& s_str, char a)
 	if (!s)
 		return false;
 
-	s->transitions[a].clear();
+	for (const auto& output_state : output_states)
+	{
+		if (!stateExists(output_state))
+		{
+			*getOutputStream() << "Error: automaton " << getID() << " does not have a state \"" << output_state << "\""
+							   << std::endl;
+			continue;
+		}
+
+		s->transitions[a].insert(getState(output_state));
+	}
 
 	return true;
 }
@@ -294,12 +304,28 @@ bool Automaton::removeTransition(const std::string& s1_str, const std::string& s
 
 	if (s1->transitions[a].find(s2) == s1->transitions[a].end())
 	{
-		*getOutputStream() << "Error: automaton " << getID() << ", couldn't remove transition δ(" << s1->name << ", " << a
-				  << ") = " << s2->name << std::endl;
+		*getOutputStream() << "Error: automaton " << getID() << ", couldn't remove transition δ(" << s1->name << ", "
+						   << a
+						   << ") = " << s2->name << std::endl;
 		return false;
 	}
 
 	s1->transitions[a].erase(s2);
+
+	return true;
+}
+
+bool Automaton::removeTransitions(const std::string& s_str, char a)
+{
+	if (!isSymbolInAlphabet(a))
+		return false;
+
+	State* s = getState(s_str);
+
+	if (!s)
+		return false;
+
+	s->transitions[a].clear();
 
 	return true;
 }
@@ -565,6 +591,7 @@ Automaton::State* Automaton::getState(const std::string& name, bool error_output
 		return state->second;
 
 	if (error_output)
-		*getOutputStream() << "Error: automaton " << getID() << ", couldn't find state with name \"" << name << "\"" << std::endl;
+		*getOutputStream() << "Error: automaton " << getID() << ", couldn't find state with name \"" << name << "\""
+						   << std::endl;
 	return nullptr;
 }

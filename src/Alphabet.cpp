@@ -85,6 +85,11 @@ void Alphabet::setEpsilon(char _epsilon)
 	epsilon = _epsilon;
 }
 
+char Alphabet::getStandardEpsilon()
+{
+	return standard_epsilon;
+}
+
 std::ostream* Alphabet::getOutputStream() const
 {
 	return output_stream;

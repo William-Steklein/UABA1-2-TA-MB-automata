@@ -13,7 +13,9 @@ public:
 	DFA(const std::string& json_filename);
 	DFA(const DFA& dfa1, const DFA& dfa2, bool intersection);
 
+
 	bool addTransition(const std::string& s1_str, const std::string& s2_str, char a) override;
+	bool addTransitions(const std::string& s_str, const std::set<std::string>& output_states, char a);
 
 	NFA toNFA() const;
 	ENFA toENFA() const;
