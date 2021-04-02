@@ -1,7 +1,4 @@
-#include "DFA.h"
 #include "NFA.h"
-#include "ENFA.h"
-#include "RE.h"
 
 bool NFA::load(const std::string& filename)
 {

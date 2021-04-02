@@ -4,6 +4,14 @@
 #include <iostream>
 #include <string>
 #include <set>
+#include <fstream>
+#include <iomanip>
+#include <utility>
+#include <vector>
+#include <map>
+#include <tuple>
+#include <graphviz/gvc.h>
+#include "json.hpp"
 
 class Alphabet
 {

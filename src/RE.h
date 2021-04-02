@@ -1,12 +1,15 @@
 #ifndef UABA1_TA_AUTOMATA2__RE_H
 #define UABA1_TA_AUTOMATA2__RE_H
 
+#include "Alphabet.h"
+
 class DFA;
 class NFA;
 class ENFA;
 
 class RE : public Alphabet
 {
+public:
 	enum NodeType
 	{
 		var, plus, dot, star
@@ -20,7 +23,12 @@ class RE : public Alphabet
 		NodeType nodetype = var;
 		char symbol = ' ';
 
-		RENode& operator=(RENode _renode);
+		int nodeID;
+		static int nextnodeID;
+
+		RENode();
+		RENode(RENode* _parent, const std::vector<RENode*>& _children, int _node_id, NodeType _nodetype, char _symbol);
+		RENode& operator=(const RENode& _renode);
 	};
 	RENode* start_node = nullptr;
 	int nr_of_nodes = 0;
@@ -29,6 +37,7 @@ public:
 	RE();
 	RE(const std::string& regex_string, char epsilon);
 	~RE();
+	RE& operator=(const RE& _re);
 
 	bool load(const std::string& regex_string, char epsilon);
 	std::string save() const;
@@ -49,7 +58,7 @@ public:
 	std::string genDOT() const;
 	bool genImage() const;
 
-private:
+public:
 	void deleteNode(RE::RENode* current_node);
 	RENode* parse(const std::string& regex_string2, char eps);
 	std::string genDOTRec(RE::RENode* current_node) const;

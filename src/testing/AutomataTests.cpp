@@ -5,7 +5,10 @@
 #include "../ENFA.h"
 #include "../RE.h"
 
-class AutomataTests: public ::testing::Test {
+void deleteFiles(const std::string& folderpath);
+
+class AutomataTests : public ::testing::Test
+{
  protected:
 	// You should make the members protected s.t. they can be
 	// accessed from sub-classes.
@@ -13,13 +16,15 @@ class AutomataTests: public ::testing::Test {
 	// virtual void SetUp() will be called before each test is run.  You
 	// should define it if you need to initialize the variables.
 	// Otherwise, this can be skipped.
-	virtual void SetUp() {
+	virtual void SetUp()
+	{
 	}
 
 	// virtual void TearDown() will be called after each test is run.
 	// You should define it if there is cleanup work to do.  Otherwise,
 	// you don't have to provide it.
-	virtual void TearDown() {
+	virtual void TearDown()
+	{
 	}
 
 	// Declares the variables your tests want to use.
@@ -102,13 +107,13 @@ TEST_F(AutomataTests, basic_functionality)
 	EXPECT_FALSE(dfa0.addTransition("Q1", "Q0", '1'));
 	EXPECT_TRUE(dfa0.isLegal());
 
-    EXPECT_EQ("{Q1,Q2}", DFA::getSetOfStatesString(dfa0.getAllStates()));
-    dfa0.renameStates(true);
-    EXPECT_EQ("{A,B}", DFA::getSetOfStatesString(dfa0.getAllStates()));
-    EXPECT_TRUE(dfa0.isLegal());
-    dfa0.renameStates(false);
-    EXPECT_EQ("{0,1}", DFA::getSetOfStatesString(dfa0.getAllStates()));
-    EXPECT_TRUE(dfa0.isLegal());
+	EXPECT_EQ("{Q1,Q2}", DFA::getSetOfStatesString(dfa0.getAllStates()));
+	dfa0.renameStates(true);
+	EXPECT_EQ("{A,B}", DFA::getSetOfStatesString(dfa0.getAllStates()));
+	EXPECT_TRUE(dfa0.isLegal());
+	dfa0.renameStates(false);
+	EXPECT_EQ("{0,1}", DFA::getSetOfStatesString(dfa0.getAllStates()));
+	EXPECT_TRUE(dfa0.isLegal());
 
 	EXPECT_EQ("{1}", DFA::getSetOfStatesString(dfa0.transition(dfa0.getStartState(), '1')));
 
@@ -134,42 +139,42 @@ TEST_F(AutomataTests, basic_functionality)
 	EXPECT_EQ("", dfa1.getStartState());
 
 	// NFA
-    NFA nfa1("../src/testing/testInput/basic_functionality/NFA1.json");
-    nfa1.setOutputStream(bitBucket);
-    EXPECT_TRUE(nfa1.isLegal());
-    EXPECT_EQ(2, nfa1.getID());
+	NFA nfa1("../src/testing/testInput/basic_functionality/NFA1.json");
+	nfa1.setOutputStream(bitBucket);
+	EXPECT_TRUE(nfa1.isLegal());
+	EXPECT_EQ(2, nfa1.getID());
 
-    EXPECT_TRUE(nfa1.accepts("c"));
-    EXPECT_TRUE(nfa1.accepts("ccc"));
-    EXPECT_TRUE(nfa1.accepts("cccc"));
-    EXPECT_FALSE(nfa1.accepts("cc"));
-    EXPECT_FALSE(nfa1.accepts("ccccc"));
+	EXPECT_TRUE(nfa1.accepts("c"));
+	EXPECT_TRUE(nfa1.accepts("ccc"));
+	EXPECT_TRUE(nfa1.accepts("cccc"));
+	EXPECT_FALSE(nfa1.accepts("cc"));
+	EXPECT_FALSE(nfa1.accepts("ccccc"));
 
-    EXPECT_TRUE(nfa1.removeState("4"));
-    EXPECT_TRUE(nfa1.isLegal());
+	EXPECT_TRUE(nfa1.removeState("4"));
+	EXPECT_TRUE(nfa1.isLegal());
 
-    EXPECT_EQ(' ', dfa1.getEpsilon());
-    nfa1.setEpsilon('*');
-    EXPECT_FALSE(nfa1.isLegal());
+	EXPECT_EQ(' ', dfa1.getEpsilon());
+	nfa1.setEpsilon('*');
+	EXPECT_FALSE(nfa1.isLegal());
 
-    // ENFA
-    ENFA enfa1("../src/testing/testInput/basic_functionality/ENFA1.json");
-    enfa1.setOutputStream(bitBucket);
-    EXPECT_TRUE(enfa1.isLegal());
-    EXPECT_EQ(3, enfa1.getID());
+	// ENFA
+	ENFA enfa1("../src/testing/testInput/basic_functionality/ENFA1.json");
+	enfa1.setOutputStream(bitBucket);
+	EXPECT_TRUE(enfa1.isLegal());
+	EXPECT_EQ(3, enfa1.getID());
 
-    EXPECT_TRUE(enfa1.accepts("k"));
-    EXPECT_TRUE(enfa1.accepts("j"));
-    EXPECT_TRUE(enfa1.accepts("jj"));
-    EXPECT_FALSE(enfa1.accepts("kj"));
-    EXPECT_FALSE(enfa1.accepts("jkj"));
+	EXPECT_TRUE(enfa1.accepts("k"));
+	EXPECT_TRUE(enfa1.accepts("j"));
+	EXPECT_TRUE(enfa1.accepts("jj"));
+	EXPECT_FALSE(enfa1.accepts("kj"));
+	EXPECT_FALSE(enfa1.accepts("jkj"));
 
-    EXPECT_EQ('*', enfa1.getEpsilon());
-    enfa1.setEpsilon(' ');
-    EXPECT_FALSE(enfa1.isLegal());
+	EXPECT_EQ('*', enfa1.getEpsilon());
+	enfa1.setEpsilon(' ');
+	EXPECT_FALSE(enfa1.isLegal());
 
 	// RE
-	RE re1("(m+y)*+(e+y+m+i)s",'e');
+	RE re1("(m+y)*+(e+y+m+i)s", 'e');
 	re1.setOutputStream(bitBucket);
 	EXPECT_TRUE(re1.isLegal());
 	EXPECT_EQ("(m+y)*+(e+y+m+i)s", re1.save());
@@ -220,13 +225,22 @@ TEST_F(AutomataTests, subset_construction)
 
 	DFA dfa1 = nfa1.toDFA();
 	EXPECT_TRUE(dfa1.isLegal());
+	EXPECT_EQ("{{0},{1,2},{1,3},{1,4},{2,4}}", DFA::getSetOfStatesString(dfa1.getAllStates()));
 
-	nfa1.genImage();
-	dfa1.genImage();
-
-	// todo: add accepts
+	EXPECT_TRUE(dfa1.accepts("c"));
+	EXPECT_TRUE(dfa1.accepts("ccc"));
+	EXPECT_TRUE(dfa1.accepts("cccc"));
+	EXPECT_FALSE(dfa1.accepts(""));
+	EXPECT_FALSE(dfa1.accepts("cc"));
+	EXPECT_FALSE(dfa1.accepts("ccccc"));
 
 	NFA nfa2("../src/testing/testInput/subset_construction/NFA2.json");
+	EXPECT_TRUE(nfa2.isLegal());
+
+	DFA dfa2 = nfa2.toDFA();
+	EXPECT_TRUE(dfa2.isLegal());
+	EXPECT_EQ("{{p,q,r,s},{p,q,r},{p,q,s},{p,q},{p,r,s},{p,r},{p,s},{p}}",
+		DFA::getSetOfStatesString(dfa2.getAllStates()));
 }
 
 TEST_F(AutomataTests, modified_subset_construction)
@@ -246,7 +260,9 @@ TEST_F(AutomataTests, regex_to_ENFA)
 
 TEST_F(AutomataTests, state_elimination)
 {
+// (f(d)*f+d(d+f(d)*f))(f+d)*
 
+//
 }
 
 TEST_F(AutomataTests, table_filling_algorithm)
@@ -254,7 +270,8 @@ TEST_F(AutomataTests, table_filling_algorithm)
 
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv)
+{
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 }

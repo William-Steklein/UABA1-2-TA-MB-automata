@@ -1,7 +1,4 @@
 #include "DFA.h"
-#include "NFA.h"
-#include "ENFA.h"
-#include "RE.h"
 
 bool DFA::load(const std::string& filename)
 {
@@ -140,12 +137,14 @@ RE DFA::toRE() const
 
 	for (const auto& elistate : states_to_eliminate)
 	{
-		for (auto& inputtransition : getInputTransitionsRE(current_transitions, elistate))
+		std::map<std::string, RE*> inputtransitions = getInputTransitionsRE(current_transitions, elistate);
+		std::map<std::string, RE*> outputtransitions = current_transitions[elistate];
+		for (auto& inputtransition : inputtransitions)
 		{
-			for (auto& outputtransition : current_transitions[elistate])
+			for (auto& outputtransition : outputtransitions)
 			{
-				// if outputtransition == elistate
-				if (outputtransition.first == elistate)
+				// if outputtransition goes to elistate
+				if (outputtransition.first == elistate || inputtransition.first == elistate)
 					continue;
 
 				std::vector<RE*> REs;
@@ -157,7 +156,7 @@ RE DFA::toRE() const
 				// if multiple loops then do union
 				RE* temp_RE = getLoopsRE(current_transitions, elistate);
 
-				if (temp_RE)
+				if (!temp_RE->empty())
 				{
 					temp_RE->kleeneStar();
 					REs.push_back(temp_RE);
@@ -170,8 +169,7 @@ RE DFA::toRE() const
 				RE* new_RE2 = new RE;
 				new_RE2->concatenateRE(REs);
 
-//				for (const auto& re : REs)
-//					delete re;
+				delete temp_RE;
 
 				// put in current_transitions
 				if (current_transitions[inputtransition.first].find(outputtransition.first)
@@ -180,6 +178,8 @@ RE DFA::toRE() const
 					RE* new_new_RE = new RE;
 					new_new_RE->unionRE({ current_transitions[inputtransition.first][outputtransition.first],
 										  new_RE2 });
+					delete new_RE2;
+					delete current_transitions[inputtransition.first][outputtransition.first];
 					current_transitions[inputtransition.first][outputtransition.first] = new_new_RE;
 				}
 				else
@@ -187,34 +187,52 @@ RE DFA::toRE() const
 			}
 		}
 		// remove elistate
+		for (const auto& inputtransition : inputtransitions)
+		{
+			delete current_transitions[inputtransition.first][elistate];
+			current_transitions[inputtransition.first].erase(current_transitions[inputtransition.first].find(elistate));
+		}
+		for (const auto& transition : current_transitions[elistate])
+			delete transition.second;
 		current_transitions.erase((current_transitions.find(elistate)));
 	}
 
+	std::ostream bitBucket(0);
+
 	// ((R+S(U*)T)*)S(U*)
 	RE* RE_R = getLoopsRE(current_transitions, getStartState());
-
 	RE* RE_S = current_transitions[getStartState()][accepting_state];
 	RE* RE_T = current_transitions[accepting_state][getStartState()];
-
 	RE* RE_U = getLoopsRE(current_transitions, accepting_state);
 
+	delete current_transitions[getStartState()][getStartState()];
+	delete current_transitions[accepting_state][accepting_state];
+
+	RE_U->setOutputStream(bitBucket);
 	RE_U->kleeneStar();
 
 	RE final_RE;
-	if (RE_R)
-		final_RE = *RE_R;
+	final_RE.setOutputStream(bitBucket);
+//	if (RE_R)
+//		final_RE = *RE_R;
 	RE* temp1 = new RE;
-	RE_U->kleeneStar();
+	temp1->setOutputStream(bitBucket);
 	temp1->concatenateRE({ RE_S, RE_U, RE_T });
-	final_RE.unionRE({ temp1 });
+	final_RE.unionRE({ RE_R, temp1 });
 	delete temp1;
 
 	final_RE.kleeneStar();
 	final_RE.concatenateRE({ RE_S, RE_U });
 
+	delete RE_R;
+	delete RE_S;
+	delete RE_T;
+	delete RE_U;
+
 	final_RE.setAlphabet(getAlphabet());
 	final_RE.setEpsilon('e');
 	final_RE.addSymbol('e');
+	final_RE.setOutputStream(std::cerr);
 
 	return final_RE;
 }
@@ -233,10 +251,12 @@ void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 
 	if (intersection)
 		addState(new_state_name,
-			dfa1.isStateAccepting(pair_of_input_states.first) && dfa2.isStateAccepting(pair_of_input_states.second));
+				dfa1.isStateAccepting(pair_of_input_states.first) &&
+				dfa2.isStateAccepting(pair_of_input_states.second));
 	else
 		addState(new_state_name,
-			dfa1.isStateAccepting(pair_of_input_states.first) || dfa2.isStateAccepting(pair_of_input_states.second));
+				dfa1.isStateAccepting(pair_of_input_states.first) ||
+				dfa2.isStateAccepting(pair_of_input_states.second));
 
 	setStartState("(" + pair_of_input_states.first + "," + pair_of_input_states.second + ")");
 	pairs_of_input_states.push_back(pair_of_input_states);
@@ -259,20 +279,21 @@ void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 			{
 				if (intersection)
 					addState(new_state_name,
-						dfa1.isStateAccepting(pair_of_output_states.first)
-						&& dfa2.isStateAccepting(pair_of_output_states.second));
+							dfa1.isStateAccepting(pair_of_output_states.first)
+							&& dfa2.isStateAccepting(pair_of_output_states.second));
 				else
 					addState(new_state_name,
-						dfa1.isStateAccepting(pair_of_output_states.first)
-						|| dfa2.isStateAccepting(pair_of_output_states.second));
+							dfa1.isStateAccepting(pair_of_output_states.first)
+							|| dfa2.isStateAccepting(pair_of_output_states.second));
 
 				new_pairs_of_input_states.push_back(pair_of_output_states);
 			}
 			addTransition("(" + pair_of_input_states.first + "," + pair_of_input_states.second + ")",
-				new_state_name, a);
+					new_state_name, a);
 		}
 		pairs_of_input_states
-			.insert(pairs_of_input_states.end(), new_pairs_of_input_states.begin(), new_pairs_of_input_states.end());
+				.insert(pairs_of_input_states.end(), new_pairs_of_input_states.begin(),
+						new_pairs_of_input_states.end());
 		new_pairs_of_input_states.clear();
 	}
 	isLegal();
@@ -327,12 +348,15 @@ std::map<std::string, std::map<std::string, RE*>> DFA::transitionsToRE() const
 		for (char symbol : getAlphabet())
 		{
 			RE* new_RE = new RE;
+
 			new_RE->load(std::string(1, symbol), 'e');
 			if (new_transitions[state].find(*transition(state, symbol).begin()) != new_transitions[state].end())
 			{
 				// union
 				RE* new_new_RE = new RE;
 				new_new_RE->unionRE({ new_transitions[state][*transition(state, symbol).begin()], new_RE });
+				delete new_transitions[state][*transition(state, symbol).begin()];
+				delete new_RE;
 				new_transitions[state][*transition(state, symbol).begin()] = new_new_RE;
 			}
 			else
@@ -346,8 +370,8 @@ std::map<std::string, std::map<std::string, RE*>> DFA::transitionsToRE() const
 }
 
 std::map<std::string, RE*> DFA::getInputTransitionsRE(const std::map<std::string,
-	std::map<std::string, RE*>>& transitionsRE,
-	const std::string& target_state)
+		std::map<std::string, RE*>>& transitionsRE,
+		const std::string& target_state)
 {
 	std::map<std::string, RE*> input_transitions;
 
@@ -364,7 +388,7 @@ std::map<std::string, RE*> DFA::getInputTransitionsRE(const std::map<std::string
 }
 
 RE* DFA::getLoopsRE(std::map<std::string, std::map<std::string, RE*>>& transitionsRE,
-	const std::string& target_state)
+		const std::string& target_state)
 {
 	std::vector<RE*> loops_regexes;
 
@@ -373,14 +397,17 @@ RE* DFA::getLoopsRE(std::map<std::string, std::map<std::string, RE*>>& transitio
 		if (output_transition.first == target_state)
 			loops_regexes.push_back(output_transition.second);
 	}
+	std::ostream bitBucket(0);
 
-	if (loops_regexes.size() > 1)
-	{
-		RE* new_RE = new RE;
-		new_RE->unionRE(loops_regexes);
-	}
-	else if (loops_regexes.size() == 1)
-		return loops_regexes[0];
+	RE* new_RE = new RE;
+	new_RE->setOutputStream(bitBucket);
 
-	return nullptr;
+	new_RE->unionRE(loops_regexes);
+
+//	if (loops_regexes.size() > 1)
+//		new_RE->unionRE(loops_regexes);
+//	else if (loops_regexes.size() == 1)
+//		new_RE = loops_regexes[0];
+
+	return new_RE;
 }

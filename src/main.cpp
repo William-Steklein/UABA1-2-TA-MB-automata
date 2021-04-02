@@ -1,74 +1,77 @@
-#include <iostream>
-#include "DFA.h"
-#include "NFA.h"
-#include "ENFA.h"
-#include "RE.h"
+//#include <iostream>
+//#include "DFA.h"
+//#include "NFA.h"
+//#include "ENFA.h"
+//#include "RE.h"
 
 /*
  * todo implementation
- * - state elimination DFA -> regex
- * - table filling algorithm
+ * 		- table filling algorithm
  *
  *
  * todo cleaning
- * - rewrite the whole project with better polymorphism
- * 		- finish all conversions
  * 		- relook all algoritms and make tests
- *
- * - RE fix concatenation child problem => user error handling
- *
- * - change or remove epsilon in (DFA) transitionstoRE
- * - RE parser remove eps parameter and make a get epsilon function
- * - clean or rewrite RE parser
- * - make everything that can be made const const
- * - MEMORY LEAKS AAAAAAAAAAAAAAAAAAAAAAAAAAAAA!!!!!!!!!!!!!!
+ * 		- RE fix concatenation child problem => user error handling
+ * 		- change or remove epsilon in (DFA) transitionstoRE
+ * 		- RE parser remove eps parameter and make a get epsilon function
+ * 		- clean or rewrite RE parser
+ * 		- make everything that can be made const const
  *
  *
  * todo changes/other
- * - make directory if it doesn't exists
- * - fix deletefiles function so that it doesn't crash when the directory doesn't exists
+ * 		- deleteFiles() : make directory if it doesn't exists
+ * 		- fix deletefiles function so that it doesn't crash when the directory doesn't exists
  *
  */
 
+#include "DFA.h"
+#include "RE.h"
+
+using namespace std;
+
 void deleteFiles(const std::string& folderpath);
 
-int main()
+struct AllocationMetrics
 {
-	deleteFiles("../DOT_images");
-	deleteFiles("../DOT_files");
+	uint32_t TotalAllocated = 0;
+	uint32_t TotalFreed = 0;
 
-	std::cout << "Hello World" << std::endl;
+	uint32_t CurrentUsage() { return TotalAllocated - TotalFreed; }
+};
 
-//	DFA dfa("../automata_json/DFA.json");
-	DFA dfa("../src/testing/testInput/basic_functionality/DFA1.json");
-	dfa.genImage();
+static AllocationMetrics s_AllocationMetrics;
 
-	std::cout << dfa.accepts("") << std::endl;
-	std::cout << dfa.accepts("1") << std::endl;
-	std::cout << dfa.accepts("111") << std::endl;
-	std::cout << dfa.accepts("00000000000") << std::endl;
-	std::cout << dfa.accepts("00000100000") << std::endl;
-	std::cout << dfa.accepts("00100100000") << std::endl;
+void* operator new(size_t size)
+{
+	s_AllocationMetrics.TotalAllocated += size;
 
-	dfa.print();
+	return malloc(size);
+}
 
-//	DFA dfa2("../automata_json/DFA2.json");
-//	dfa2.genImage();
-//
-//	DFA dfa3("../automata_json/DFA3.json");
-//	dfa3.genImage();
-//
-//	DFA dfa4("../automata_json/DFA4.json");
-//	dfa4.genImage();
-//
-//	DFA dfa5("../automata_json/DFA5.json");
-//	dfa5.genImage();
-//
-//	DFA dfa6("../automata_json/DFA6.json");
-//	dfa6.genImage();
-//
-//	DFA dfa7("../automata_json/DFA7.json");
-//	dfa7.genImage();
+void operator delete(void* memory, size_t size)
+{
+	s_AllocationMetrics.TotalFreed += size;
+
+	free(memory);
+}
+
+static void PrintMemoryUsage()
+{
+	std::cout << "Memory Usage: " << s_AllocationMetrics.CurrentUsage() << " bytes\n";
+}
+
+int main() {
+	{
+		deleteFiles("../DOT_files");
+		deleteFiles("../DOT_images");
+
+		DFA dfa("../automata_json/DFA7.json");
+		RE re3 = dfa.toRE();
+		re3.print();
+		re3.genImage();
+	}
+
+	PrintMemoryUsage();
 
 
 	return 0;

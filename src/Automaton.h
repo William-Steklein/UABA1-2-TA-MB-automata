@@ -1,15 +1,7 @@
 #ifndef UABA1_TA_AUTOMATA2__AUTOMATON_H
 #define UABA1_TA_AUTOMATA2__AUTOMATON_H
 
-#include <fstream>
-#include <iomanip>
-#include <utility>
-#include <vector>
-#include <map>
-#include <tuple>
-#include <graphviz/gvc.h>
 #include "Alphabet.h"
-#include "json.hpp"
 
 using json = nlohmann::json;
 

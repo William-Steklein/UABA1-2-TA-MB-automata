@@ -2,6 +2,9 @@
 #define UABA1_TA_AUTOMATA2__ENFA_H
 
 #include "Automaton.h"
+#include "DFA.h"
+#include "NFA.h"
+#include "RE.h"
 
 class ENFA : public Automaton
 {

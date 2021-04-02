@@ -2,6 +2,9 @@
 #define UABA1_TA_AUTOMATA2__DFA_H
 
 #include "Automaton.h"
+#include "NFA.h"
+#include "ENFA.h"
+#include "RE.h"
 
 class DFA : public Automaton
 {
@@ -25,14 +28,14 @@ public:
 
 	bool isLegal() const override;
 
- private:
+private:
 	std::map<std::string, std::map<std::string, RE*>> transitionsToRE() const;
 	static std::map<std::string, RE*> getInputTransitionsRE(const std::map<std::string,
-		std::map<std::string, RE*>>& transitionsRE,
-		const std::string& target_state);
+			std::map<std::string, RE*>>& transitionsRE,
+			const std::string& target_state);
 	static RE* getLoopsRE(std::map<std::string,
-		std::map<std::string, RE*>>& transitionsRE,
-		const std::string& target_state);
+			std::map<std::string, RE*>>& transitionsRE,
+			const std::string& target_state);
 };
 
 #endif
