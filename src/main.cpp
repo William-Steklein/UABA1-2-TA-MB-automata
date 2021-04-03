@@ -56,14 +56,19 @@ static void PrintMemoryUsage()
 }
 
 int main() {
-	DFA dfa("../automata_json/DFA4.json");
-//	std::set<std::string> reversetransset = dfa.reverseTransition("D", '0');
+	DFA dfa("../automata_json/DFA8.json");
+	DFA dfa2("../automata_json/DFA7.json");
+
+
 	dfa.printTable();
 	DFA mindfa = dfa.minimize();
+
 	dfa.genImage();
 	mindfa.genImage();
-	mindfa.printTable();
-//	mindfa.print();
-	//cout << boolalpha << (dfa == mindfa) << endl;    // zijn ze equivalent? Zou hier zeker moeten. Dit wordt getest in de volgende vraag, maar hiermee kan je al eens proberen
+
+	mindfa.print();
+
+	cout << boolalpha << (dfa == mindfa) << endl;    // zijn ze equivalent? Zou hier zeker moeten. Dit wordt getest in de volgende vraag, maar hiermee kan je al eens proberen
+	cout << boolalpha << (dfa == dfa2) << endl;    // zijn ze equivalent? Zou hier zeker moeten. Dit wordt getest in de volgende vraag, maar hiermee kan je al eens proberen
 	return 0;
 }

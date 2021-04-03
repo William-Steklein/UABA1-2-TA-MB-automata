@@ -28,6 +28,7 @@ protected:
 	Alphabet& operator=(const Alphabet& _alphabet);
 
 	void incrementID();
+	void decrementID();
 
  public:
 	bool addSymbol(char symbol);

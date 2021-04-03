@@ -41,6 +41,19 @@ DFA::DFA(const DFA& dfa1, const DFA& dfa2, bool intersection)
 	product(dfa1, dfa2, intersection);
 }
 
+bool operator==(const DFA& dfa1, const DFA& dfa2)
+{
+	if (dfa1.getAlphabet() != dfa2.getAlphabet())
+		return false;
+
+	std::map<std::string, std::map<std::string, bool>> table = dfa1.getTable(dfa2, false);
+
+	if (table[dfa1.getStartState()][dfa2.getStartState()] || table[dfa2.getStartState()][dfa1.getStartState()])
+		return false;
+
+	return true;
+}
+
 bool DFA::addTransition(const std::string& s1_str, const std::string& s2_str, char a)
 {
 	if (!transition(s1_str, a).empty())
@@ -51,7 +64,8 @@ bool DFA::addTransition(const std::string& s1_str, const std::string& s2_str, ch
 		if (!stateExists(s1_str) || !stateExists(s2_str))
 			return false;
 
-		*getErrorOutputStream() << "Error: DFA " << getID() << ", overwriting transition δ(" << s1_str << ", " << a << ")"
+		*getErrorOutputStream() << "Error: DFA " << getID() << ", overwriting transition δ(" << s1_str << ", " << a
+								<< ")"
 								<< std::endl;
 		removeTransitions(s1_str, a);
 	}
@@ -70,7 +84,8 @@ bool DFA::addTransitions(const std::string& s_str, const std::set<std::string>& 
 		return true;
 	}
 
-	*getErrorOutputStream() << "Error: DFA " << getID() << ", addTransitions: output_states contains more than one state"
+	*getErrorOutputStream() << "Error: DFA " << getID()
+							<< ", addTransitions: output_states contains more than one state"
 							<< std::endl;
 	return false;
 }
@@ -303,7 +318,7 @@ DFA DFA::minimize() const
 	DFA dfa;
 	dfa.setAlphabet(getAlphabet());
 
-	std::map<std::string, std::map<std::string, bool>> table = getTable();
+	std::map<std::string, std::map<std::string, bool>> table = getTable(DFA(), true);
 	std::set<std::set<std::string>> combined_states;
 
 	for (const auto& table2 : table)
@@ -377,7 +392,8 @@ DFA DFA::minimize() const
 				{
 					if (_combined_state.find(*output_states.begin()) != _combined_state.end())
 					{
-						dfa.addTransition(getSetOfStatesString(combined_state), getSetOfStatesString(_combined_state), a);
+						dfa.addTransition(getSetOfStatesString(combined_state), getSetOfStatesString(_combined_state),
+								a);
 						transition_added = true;
 					}
 				}
@@ -387,8 +403,7 @@ DFA DFA::minimize() const
 			}
 
 			else
-				dfa.addTransition(getSetOfStatesString(combined_state),
-						*output_states.begin(), a);
+				dfa.addTransition(getSetOfStatesString(combined_state), *output_states.begin(), a);
 		}
 
 	}
@@ -466,63 +481,6 @@ void DFA::printTable(std::ostream& output_stream) const
 
 	output_stream << std::endl;
 }
-
-std::map<std::string, std::map<std::string, bool>> DFA::getTable() const
-{
-	std::map<std::string, std::map<std::string, bool>> table;
-
-	if (getAllStates().empty() || getAllStates().size() == 1)
-		return table;
-
-	for (const auto& state : getAllStates())
-	{
-		for (const auto& state2 : getAllStates())
-		{
-			if (state2 == state)
-				continue;
-
-			if ((isStateAccepting(state) && !isStateAccepting(state2)) ||
-				(!isStateAccepting(state) && isStateAccepting(state2)))
-			{
-				table[state][state2] = true;
-				table[state2][state] = true;
-			}
-			else
-			{
-				table[state][state2] = false;
-				table[state2][state] = false;
-			}
-		}
-	}
-
-	bool new_marks_placed = true;
-	std::map<std::string, std::set<std::string>> checked;
-
-	while (new_marks_placed)
-	{
-		new_marks_placed = false;
-		for (const auto& table2 : table)
-		{
-			for (const auto& state2 : table2.second)
-			{
-				// if there is a mark
-				// maybe put this in a helpfunction
-				bool is_checked = state2.second;
-				bool is_checked2 = checked[table2.first].find(state2.first) == checked[table2.first].end();
-				if (is_checked && is_checked2)
-				{
-					if (placeTableMark(table2.first, state2.first, table))
-						new_marks_placed = true;
-
-					checked[table2.first].insert(state2.first);
-				}
-			}
-		}
-	}
-
-	return table;
-}
-
 
 bool DFA::isLegal() const
 {
@@ -629,35 +587,138 @@ RE* DFA::getLoopsRE(std::map<std::string, std::map<std::string, RE*>>& transitio
 
 	new_RE->unionRE(loops_regexes);
 
-//	if (loops_regexes.size() > 1)
-//		new_RE->unionRE(loops_regexes);
-//	else if (loops_regexes.size() == 1)
-//		new_RE = loops_regexes[0];
-
 	return new_RE;
 }
 
-bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
-		std::map<std::string, std::map<std::string, bool>>& table) const
+std::map<std::string, std::map<std::string, bool>> DFA::getTable(const DFA& dfa2, bool is_minimize) const
 {
+	std::set<std::string> dfa1_states = getAllStates();
+	std::set<std::string> dfa2_states;
+	std::set<std::string> all_states = dfa1_states;
+
+	if (is_minimize)
+//		decrementID();
+		;
+	else
+	{
+		dfa2_states = dfa2.getAllStates();
+		all_states.insert(dfa2_states.begin(), dfa2_states.end());
+	}
+
+	std::map<std::string, std::map<std::string, bool>> table;
+
+	if (all_states.empty() || all_states.size() == 1)
+		return table;
+
+	for (const auto& state : all_states)
+	{
+		for (const auto& state2 : all_states)
+		{
+			if (state2 == state)
+				continue;
+
+			bool is_state1_accepting;
+			bool is_state2_accepting;
+
+			if (dfa1_states.find(state) != dfa1_states.end())
+				is_state1_accepting = isStateAccepting(state);
+			else
+				is_state1_accepting = dfa2.isStateAccepting(state);
+
+			if (dfa1_states.find(state2) != dfa1_states.end())
+				is_state2_accepting = isStateAccepting(state2);
+			else
+				is_state2_accepting = dfa2.isStateAccepting(state2);
+
+			if ((is_state1_accepting && !is_state2_accepting) || (!is_state1_accepting && is_state2_accepting))
+			{
+				table[state][state2] = true;
+				table[state2][state] = true;
+			}
+			else
+			{
+				table[state][state2] = false;
+				table[state2][state] = false;
+			}
+		}
+	}
+
+	bool new_marks_placed = true;
+	std::map<std::string, std::set<std::string>> checked;
+
+	while (new_marks_placed)
+	{
+		new_marks_placed = false;
+		for (const auto& table2 : table)
+		{
+			for (const auto& state2 : table2.second)
+			{
+				// if there is a mark
+				// maybe put this in a helpfunction
+				bool is_checked = state2.second;
+				bool is_checked2 = checked[table2.first].find(state2.first) == checked[table2.first].end();
+				if (is_checked && is_checked2)
+				{
+					if (placeTableMark(table2.first, state2.first, table, dfa2))
+						new_marks_placed = true;
+
+					checked[table2.first].insert(state2.first);
+				}
+			}
+		}
+	}
+
+	return table;
+}
+
+bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
+		std::map<std::string, std::map<std::string, bool>>& table, const DFA& dfa2, bool is_minimize) const
+{
+	std::set<std::string> dfa1_states = getAllStates();
+	std::set<std::string> dfa2_states;
+
+	if (!is_minimize)
+		dfa2_states = dfa2.getAllStates();
+
 	table[s1][s2] = true;
 	bool new_marks_placed = false;
 
+	std::set<std::string> rtrans1;
+	std::set<std::string> rtrans2;
+
 	for (char c : getAlphabet())
 	{
-		std::set<std::string> rtrans1 = reverseTransition(s1, c);
-		for (const auto& trans1 : rtrans1)
-		{
-			std::set<std::string> rtrans2 = reverseTransition(s2, c);
-			for (const auto& trans2 : rtrans2)
-			{
-				bool s1_accepting = isStateAccepting(trans1);
-				bool s2_accepting = isStateAccepting(trans2);
+		if (dfa1_states.find(s1) != dfa1_states.end())
+			rtrans1 = reverseTransition(s1, c);
+		else
+			rtrans1 = dfa2.reverseTransition(s1, c);
 
-				if ((!s1_accepting && !s2_accepting) || (s1_accepting && s2_accepting))
+		for (const auto& state : rtrans1)
+		{
+			if (dfa1_states.find(s2) != dfa1_states.end())
+				rtrans2 = reverseTransition(s2, c);
+			else
+				rtrans2 = dfa2.reverseTransition(s2, c);
+
+			for (const auto& state2 : rtrans2)
+			{
+				bool is_state1_accepting;
+				bool is_state2_accepting;
+
+				if (dfa1_states.find(state) != dfa1_states.end())
+					is_state1_accepting = isStateAccepting(state);
+				else
+					is_state1_accepting = dfa2.isStateAccepting(state);
+
+				if (dfa1_states.find(state2) != dfa1_states.end())
+					is_state2_accepting = isStateAccepting(state2);
+				else
+					is_state2_accepting = dfa2.isStateAccepting(state2);
+
+				if ((!is_state1_accepting && !is_state2_accepting) || (is_state1_accepting &&is_state2_accepting))
 				{
-					table[trans1][trans2] = true;
-					table[trans2][trans1] = true;
+					table[state][state2] = true;
+					table[state2][state] = true;
 					new_marks_placed = true;
 				}
 			}
@@ -666,3 +727,89 @@ bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
 
 	return new_marks_placed;
 }
+
+//std::map<std::string, std::map<std::string, bool>> DFA::getTable() const
+//{
+//	std::map<std::string, std::map<std::string, bool>> table;
+//
+//	if (getAllStates().empty() || getAllStates().size() == 1)
+//		return table;
+//
+//	for (const auto& state : getAllStates())
+//	{
+//		for (const auto& state2 : getAllStates())
+//		{
+//			if (state2 == state)
+//				continue;
+//
+//			if ((isStateAccepting(state) && !isStateAccepting(state2)) ||
+//				(!isStateAccepting(state) && isStateAccepting(state2)))
+//			{
+//				table[state][state2] = true;
+//				table[state2][state] = true;
+//			}
+//			else
+//			{
+//				table[state][state2] = false;
+//				table[state2][state] = false;
+//			}
+//		}
+//	}
+//
+//	bool new_marks_placed = true;
+//	std::map<std::string, std::set<std::string>> checked;
+//
+//	while (new_marks_placed)
+//	{
+//		new_marks_placed = false;
+//		for (const auto& table2 : table)
+//		{
+//			for (const auto& state2 : table2.second)
+//			{
+//				// if there is a mark
+//				// maybe put this in a helpfunction
+//				bool is_checked = state2.second;
+//				bool is_checked2 = checked[table2.first].find(state2.first) == checked[table2.first].end();
+//				if (is_checked && is_checked2)
+//				{
+//					if (placeTableMark(table2.first, state2.first, table))
+//						new_marks_placed = true;
+//
+//					checked[table2.first].insert(state2.first);
+//				}
+//			}
+//		}
+//	}
+//
+//	return table;
+//}
+//
+//bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
+//		std::map<std::string, std::map<std::string, bool>>& table) const
+//{
+//	table[s1][s2] = true;
+//	bool new_marks_placed = false;
+//
+//	for (char c : getAlphabet())
+//	{
+//		std::set<std::string> rtrans1 = reverseTransition(s1, c);
+//		for (const auto& trans1 : rtrans1)
+//		{
+//			std::set<std::string> rtrans2 = reverseTransition(s2, c);
+//			for (const auto& trans2 : rtrans2)
+//			{
+//				bool s1_accepting = isStateAccepting(trans1);
+//				bool s2_accepting = isStateAccepting(trans2);
+//
+//				if ((!s1_accepting && !s2_accepting) || (s1_accepting && s2_accepting))
+//				{
+//					table[trans1][trans2] = true;
+//					table[trans2][trans1] = true;
+//					new_marks_placed = true;
+//				}
+//			}
+//		}
+//	}
+//
+//	return new_marks_placed;
+//}

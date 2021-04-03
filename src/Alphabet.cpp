@@ -24,6 +24,11 @@ void Alphabet::incrementID()
 	ID = nextID++;
 }
 
+void Alphabet::decrementID()
+{
+	ID = nextID--;
+}
+
 bool Alphabet::addSymbol(char symbol)
 {
 	alphabet.insert(symbol);
