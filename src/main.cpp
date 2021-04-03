@@ -5,14 +5,9 @@
 //#include "RE.h"
 
 /*
- * todo implementation
- * 		- table filling algorithm
- *
- *
  * todo cleaning
  * 		- relook all algoritms and make tests
  * 		- RE fix concatenation child problem => user error handling
- * 		- change or remove epsilon in (DFA) transitionstoRE
  * 		- RE parser remove eps parameter and make a get epsilon function
  * 		- clean or rewrite RE parser
  * 		- make everything that can be made const const
@@ -61,18 +56,14 @@ static void PrintMemoryUsage()
 }
 
 int main() {
-	{
-		deleteFiles("../DOT_files");
-		deleteFiles("../DOT_images");
-
-		DFA dfa("../automata_json/DFA7.json");
-		RE re3 = dfa.toRE();
-		re3.print();
-		re3.genImage();
-	}
-
-	PrintMemoryUsage();
-
-
+	DFA dfa("../automata_json/DFA4.json");
+//	std::set<std::string> reversetransset = dfa.reverseTransition("D", '0');
+	dfa.printTable();
+	DFA mindfa = dfa.minimize();
+	dfa.genImage();
+	mindfa.genImage();
+	mindfa.printTable();
+//	mindfa.print();
+	//cout << boolalpha << (dfa == mindfa) << endl;    // zijn ze equivalent? Zou hier zeker moeten. Dit wordt getest in de volgende vraag, maar hiermee kan je al eens proberen
 	return 0;
 }

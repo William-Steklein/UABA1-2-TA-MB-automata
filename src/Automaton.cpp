@@ -57,7 +57,7 @@ bool Automaton::loadBasicComponents(const std::string& filename, const json& aut
 	if (!(automaton_json.contains("type") && automaton_json.contains("alphabet")
 		  && automaton_json.contains("states") && automaton_json.contains("transitions")))
 	{
-		*getOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
+		*getErrorOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
 		return false;
 	}
 
@@ -169,7 +169,7 @@ std::string Automaton::getStartState() const
 		return start_state->name;
 	else
 	{
-		*getOutputStream() << "Error: automaton " << getID() << " has no start state" << std::endl;
+		*getErrorOutputStream() << "Error: automaton " << getID() << " has no start state" << std::endl;
 		return "";
 	}
 }
@@ -191,7 +191,7 @@ bool Automaton::isStateAccepting(const std::string& s_str) const
 		return s->accepting;
 	else
 	{
-		*getOutputStream() << "Error: automaton " << getID() << " has no state with name \"" + s_str + "\"";
+		*getErrorOutputStream() << "Error: automaton " << getID() << " has no state with name \"" + s_str + "\"";
 		return false;
 	}
 }
@@ -203,7 +203,7 @@ void Automaton::setStateAccepting(const std::string& s_str, bool is_accepting) c
 		s->accepting = is_accepting;
 	else
 	{
-		*getOutputStream() << "Error: automaton " << getID() << " has no state with name \"" + s_str + "\"";
+		*getErrorOutputStream() << "Error: automaton " << getID() << " has no state with name \"" + s_str + "\"";
 		return;
 	}
 }
@@ -280,8 +280,8 @@ bool Automaton::addTransitions(const std::string& s_str, const std::set<std::str
 	{
 		if (!stateExists(output_state))
 		{
-			*getOutputStream() << "Error: automaton " << getID() << " does not have a state \"" << output_state << "\""
-							   << std::endl;
+			*getErrorOutputStream() << "Error: automaton " << getID() << " does not have a state \"" << output_state << "\""
+									<< std::endl;
 			continue;
 		}
 
@@ -304,9 +304,9 @@ bool Automaton::removeTransition(const std::string& s1_str, const std::string& s
 
 	if (s1->transitions[a].find(s2) == s1->transitions[a].end())
 	{
-		*getOutputStream() << "Error: automaton " << getID() << ", couldn't remove transition δ(" << s1->name << ", "
-						   << a
-						   << ") = " << s2->name << std::endl;
+		*getErrorOutputStream() << "Error: automaton " << getID() << ", couldn't remove transition δ(" << s1->name << ", "
+								<< a
+								<< ") = " << s2->name << std::endl;
 		return false;
 	}
 
@@ -337,8 +337,11 @@ std::set<std::string> Automaton::transition(const std::string& s_str, char a) co
 
 	for (const auto& current_state : current_states)
 	{
-		for (const auto& state : getState(current_state)->transitions[a])
-			result.insert(state->name);
+		if (stateExists(current_state))
+		{
+			for (const auto& state : getState(current_state)->transitions[a])
+				result.insert(state->name);
+		}
 	}
 
 	return result;
@@ -356,6 +359,42 @@ std::set<std::string> Automaton::transitionSetOfStates(const std::set<std::strin
 	}
 
 	return set_of_output_states;
+}
+
+std::set<std::string> Automaton::reverseTransition(const std::string& s_str, char a) const
+{
+	std::set<std::string> reverse_transition;
+
+	for (const auto& input_state : getAllStates())
+	{
+		for (const auto& output_state : transition(input_state, a))
+		{
+			if (output_state == s_str)
+			{
+				reverse_transition.insert(input_state);
+			}
+		}
+	}
+
+	return reverse_transition;
+}
+
+std::set<std::string> Automaton::reverseTransitionSetOfStates(const std::set<std::string>& set_of_states, char a) const
+{
+	std::set<std::string> reverse_transitions;
+
+	for (const auto& input_state : getAllStates())
+	{
+		for (const auto& output_state : transitionSetOfStates(set_of_states, a))
+		{
+			if (set_of_states.find(output_state) != set_of_states.end())
+			{
+				reverse_transitions.insert(input_state);
+			}
+		}
+	}
+
+	return reverse_transitions;
 }
 
 std::set<std::string> Automaton::eClosure(const std::set<std::string>& set_of_states) const
@@ -558,7 +597,7 @@ bool Automaton::genImage() const
 {
 	if (!isLegal())
 	{
-		*getOutputStream() << "Error: Automaton " << getID() << " is illegal" << std::endl;
+		*getErrorOutputStream() << "Error: Automaton " << getID() << " is illegal" << std::endl;
 		return false;
 	}
 
@@ -591,7 +630,7 @@ Automaton::State* Automaton::getState(const std::string& name, bool error_output
 		return state->second;
 
 	if (error_output)
-		*getOutputStream() << "Error: automaton " << getID() << ", couldn't find state with name \"" << name << "\""
-						   << std::endl;
+		*getErrorOutputStream() << "Error: automaton " << getID() << ", couldn't find state with name \"" << name << "\""
+								<< std::endl;
 	return nullptr;
 }

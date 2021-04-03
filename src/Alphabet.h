@@ -19,7 +19,7 @@ class Alphabet
 	char epsilon;
 	static const char standard_epsilon = '*';
 
-	std::ostream* output_stream = &std::cerr;
+	std::ostream* error_output_stream = &std::cerr;
 	int ID;
 	static int nextID;
 
@@ -42,7 +42,7 @@ protected:
 	void setEpsilon(char _epsilon);
 	static char getStandardEpsilon();
 
-	std::ostream* getOutputStream() const;
+	std::ostream* getErrorOutputStream() const;
 	void setOutputStream(std::ostream& _output_stream);
 	int getID() const;
 };

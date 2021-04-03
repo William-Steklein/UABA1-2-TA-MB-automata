@@ -9,14 +9,14 @@ bool ENFA::load(const std::string& filename)
 
 	if (ENFA_json["type"] != "ENFA")
 	{
-		*getOutputStream() << "Error: " << filename << " is of the type " << ENFA_json["type"] << " and not ENFA"
-				  << std::endl;
+		*getErrorOutputStream() << "Error: " << filename << " is of the type " << ENFA_json["type"] << " and not ENFA"
+								<< std::endl;
 		return false;
 	}
 
 	if (!ENFA_json.contains("eps"))
 	{
-		*getOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
+		*getErrorOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
 		return false;
 	}
 
@@ -128,13 +128,13 @@ bool ENFA::isLegal() const
 
 	if (getEpsilon() == ' ')
 	{
-		*getOutputStream() << "Error: ENFA " << getID() << " has no epsilon symbol" << std::endl;
+		*getErrorOutputStream() << "Error: ENFA " << getID() << " has no epsilon symbol" << std::endl;
 		is_legal = false;
 	}
 
 	if (!isSymbolInAlphabet(getEpsilon()))
 	{
-		*getOutputStream() << "Error: ENFA " << getID() << ", epsilon is not in the alphabet" << std::endl;
+		*getErrorOutputStream() << "Error: ENFA " << getID() << ", epsilon is not in the alphabet" << std::endl;
 		is_legal = false;
 	}
 

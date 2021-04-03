@@ -9,14 +9,14 @@ bool DFA::load(const std::string& filename)
 
 	if (DFA_json["type"] != "DFA")
 	{
-		*getOutputStream() << "Error: " << filename << " is of the type " << DFA_json["type"] << " and not DFA"
-						   << std::endl;
+		*getErrorOutputStream() << "Error: " << filename << " is of the type " << DFA_json["type"] << " and not DFA"
+								<< std::endl;
 		return false;
 	}
 
 	if (DFA_json.contains("eps"))
 	{
-		*getOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
+		*getErrorOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
 		return false;
 	}
 
@@ -51,8 +51,8 @@ bool DFA::addTransition(const std::string& s1_str, const std::string& s2_str, ch
 		if (!stateExists(s1_str) || !stateExists(s2_str))
 			return false;
 
-		*getOutputStream() << "Error: DFA " << getID() << ", overwriting transition δ(" << s1_str << ", " << a << ")"
-						   << std::endl;
+		*getErrorOutputStream() << "Error: DFA " << getID() << ", overwriting transition δ(" << s1_str << ", " << a << ")"
+								<< std::endl;
 		removeTransitions(s1_str, a);
 	}
 
@@ -70,8 +70,8 @@ bool DFA::addTransitions(const std::string& s_str, const std::set<std::string>& 
 		return true;
 	}
 
-	*getOutputStream() << "Error: DFA " << getID() << ", addTransitions: output_states contains more than one state"
-					   << std::endl;
+	*getErrorOutputStream() << "Error: DFA " << getID() << ", addTransitions: output_states contains more than one state"
+							<< std::endl;
 	return false;
 }
 
@@ -213,8 +213,7 @@ RE DFA::toRE() const
 
 	RE final_RE;
 	final_RE.setOutputStream(bitBucket);
-//	if (RE_R)
-//		final_RE = *RE_R;
+
 	RE* temp1 = new RE;
 	temp1->setOutputStream(bitBucket);
 	temp1->concatenateRE({ RE_S, RE_U, RE_T });
@@ -299,6 +298,232 @@ void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 	isLegal();
 }
 
+DFA DFA::minimize() const
+{
+	DFA dfa;
+	dfa.setAlphabet(getAlphabet());
+
+	std::map<std::string, std::map<std::string, bool>> table = getTable();
+	std::set<std::set<std::string>> combined_states;
+
+	for (const auto& table2 : table)
+	{
+		for (const auto& state2 : table2.second)
+		{
+			if (!state2.second)
+			{
+				bool added_state = false;
+				for (const auto& combined_state : combined_states)
+				{
+					if ((combined_state.find(table2.first) != combined_state.end()) ||
+						(combined_state.find(state2.first) != combined_state.end()))
+					{
+						std::set<std::string> new_combined_state = combined_state;
+						new_combined_state.insert(table2.first);
+						new_combined_state.insert(state2.first);
+
+						combined_states.erase(combined_state);
+						combined_states.insert(new_combined_state);
+						added_state = true;
+						break;
+					}
+				}
+
+				if (!added_state)
+				{
+					std::set<std::string> new_combined_state;
+					new_combined_state.insert(table2.first);
+					new_combined_state.insert(state2.first);
+
+					combined_states.insert(new_combined_state);
+				}
+			}
+		}
+	}
+
+	std::set<std::string> single_states = getAllStates();
+
+	for (const auto& combined_state : combined_states)
+	{
+		bool is_start_state = false;
+		for (const auto& state : combined_state)
+		{
+			single_states.erase(state);
+			if (state == getStartState())
+				is_start_state = true;
+		}
+
+		dfa.addState(getSetOfStatesString(combined_state), isSetOfStatesAccepting(combined_state));
+		if (is_start_state)
+			dfa.setStartState(getSetOfStatesString(combined_state));
+	}
+
+	for (const auto& state : single_states)
+	{
+		dfa.addState(state, isStateAccepting(state));
+		if (state == getStartState())
+			dfa.setStartState(state);
+	}
+
+	for (const auto& combined_state : combined_states)
+	{
+		for (char a : getAlphabet())
+		{
+			std::set<std::string> output_states = transitionSetOfStates(combined_state, a);
+			if (output_states.size() > 1)
+			{
+				bool transition_added = false;
+				for (const auto& _combined_state : combined_states)
+				{
+					if (_combined_state.find(*output_states.begin()) != _combined_state.end())
+					{
+						dfa.addTransition(getSetOfStatesString(combined_state), getSetOfStatesString(_combined_state), a);
+						transition_added = true;
+					}
+				}
+
+				if (!transition_added)
+					*getErrorOutputStream() << "Error: Could not minimize DFA " << getID() << std::endl;
+			}
+
+			else
+				dfa.addTransition(getSetOfStatesString(combined_state),
+						*output_states.begin(), a);
+		}
+
+	}
+
+	for (const auto& state : single_states)
+	{
+		for (char a : getAlphabet())
+		{
+			std::string output_state = *transition(state, a).begin();
+			bool state_added = false;
+
+			// checks if output_state is in a combined state
+			for (const auto& combined_state : combined_states)
+			{
+				if (combined_state.find(output_state) != combined_state.end())
+				{
+					dfa.addTransition(state, getSetOfStatesString(combined_state), a);
+					state_added = true;
+					break;
+				}
+			}
+
+			if (!state_added)
+				dfa.addTransition(state, output_state, a);
+		}
+	}
+
+	dfa.isLegal();
+
+	return dfa;
+}
+
+void DFA::printTable(std::ostream& output_stream) const
+{
+	std::map<std::string, std::map<std::string, bool>> table = getTable();
+
+	std::string previous_state;
+
+	for (const auto& table2 : table)
+	{
+		if (table2 == *(table.begin()))
+		{
+			previous_state = table2.first;
+			continue;
+		}
+
+		output_stream << table2.first;
+
+		for (const auto& state2 : table2.second)
+		{
+			output_stream << "\t";
+
+			if (table[table2.first][state2.first])
+				output_stream << "X";
+			else
+				output_stream << "-";
+
+			if (state2.first == previous_state)
+				break;
+		}
+
+		previous_state = table2.first;
+		output_stream << std::endl;
+	}
+
+	for (const auto& table2 : table)
+	{
+		if (table2 == *(table.begin()))
+			output_stream << " \t" << table2.first;
+		else if (table2 == *(table.rbegin()))
+			continue;
+		else
+			output_stream << "\t" << table2.first;
+	}
+
+	output_stream << std::endl;
+}
+
+std::map<std::string, std::map<std::string, bool>> DFA::getTable() const
+{
+	std::map<std::string, std::map<std::string, bool>> table;
+
+	if (getAllStates().empty() || getAllStates().size() == 1)
+		return table;
+
+	for (const auto& state : getAllStates())
+	{
+		for (const auto& state2 : getAllStates())
+		{
+			if (state2 == state)
+				continue;
+
+			if ((isStateAccepting(state) && !isStateAccepting(state2)) ||
+				(!isStateAccepting(state) && isStateAccepting(state2)))
+			{
+				table[state][state2] = true;
+				table[state2][state] = true;
+			}
+			else
+			{
+				table[state][state2] = false;
+				table[state2][state] = false;
+			}
+		}
+	}
+
+	bool new_marks_placed = true;
+	std::map<std::string, std::set<std::string>> checked;
+
+	while (new_marks_placed)
+	{
+		new_marks_placed = false;
+		for (const auto& table2 : table)
+		{
+			for (const auto& state2 : table2.second)
+			{
+				// if there is a mark
+				// maybe put this in a helpfunction
+				bool is_checked = state2.second;
+				bool is_checked2 = checked[table2.first].find(state2.first) == checked[table2.first].end();
+				if (is_checked && is_checked2)
+				{
+					if (placeTableMark(table2.first, state2.first, table))
+						new_marks_placed = true;
+
+					checked[table2.first].insert(state2.first);
+				}
+			}
+		}
+	}
+
+	return table;
+}
+
+
 bool DFA::isLegal() const
 {
 	bool is_legal = true;
@@ -314,16 +539,16 @@ bool DFA::isLegal() const
 
 			if (output_state.empty())
 			{
-				*getOutputStream() << "Error: DFA " << getID() << " has no transition from state " << state
-								   << " with symbol "
-								   << c << std::endl;
+				*getErrorOutputStream() << "Error: DFA " << getID() << " has no transition from state " << state
+										<< " with symbol "
+										<< c << std::endl;
 				is_legal = false;
 			}
 
 			if (output_state.size() > 1)
 			{
-				*getOutputStream() << "Error: DFA " << getID() << " has multiple transitions from state " << state
-								   << " with symbol " << c << std::endl;
+				*getErrorOutputStream() << "Error: DFA " << getID() << " has multiple transitions from state " << state
+										<< " with symbol " << c << std::endl;
 				is_legal = false;
 			}
 		}
@@ -331,8 +556,8 @@ bool DFA::isLegal() const
 
 	if (getEpsilon() != ' ')
 	{
-		*getOutputStream() << "Error: DFA " << getID() << " has an epsilon symbol '" << getEpsilon() << "'"
-						   << std::endl;
+		*getErrorOutputStream() << "Error: DFA " << getID() << " has an epsilon symbol '" << getEpsilon() << "'"
+								<< std::endl;
 		is_legal = false;
 	}
 
@@ -349,7 +574,7 @@ std::map<std::string, std::map<std::string, RE*>> DFA::transitionsToRE() const
 		{
 			RE* new_RE = new RE;
 
-			new_RE->load(std::string(1, symbol), 'e');
+			new_RE->load(std::string(1, symbol), getStandardEpsilon());
 			if (new_transitions[state].find(*transition(state, symbol).begin()) != new_transitions[state].end())
 			{
 				// union
@@ -410,4 +635,34 @@ RE* DFA::getLoopsRE(std::map<std::string, std::map<std::string, RE*>>& transitio
 //		new_RE = loops_regexes[0];
 
 	return new_RE;
+}
+
+bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
+		std::map<std::string, std::map<std::string, bool>>& table) const
+{
+	table[s1][s2] = true;
+	bool new_marks_placed = false;
+
+	for (char c : getAlphabet())
+	{
+		std::set<std::string> rtrans1 = reverseTransition(s1, c);
+		for (const auto& trans1 : rtrans1)
+		{
+			std::set<std::string> rtrans2 = reverseTransition(s2, c);
+			for (const auto& trans2 : rtrans2)
+			{
+				bool s1_accepting = isStateAccepting(trans1);
+				bool s2_accepting = isStateAccepting(trans2);
+
+				if ((!s1_accepting && !s2_accepting) || (s1_accepting && s2_accepting))
+				{
+					table[trans1][trans2] = true;
+					table[trans2][trans1] = true;
+					new_marks_placed = true;
+				}
+			}
+		}
+	}
+
+	return new_marks_placed;
 }

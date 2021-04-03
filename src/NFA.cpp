@@ -9,14 +9,14 @@ bool NFA::load(const std::string& filename)
 
 	if (NFA_json["type"] != "NFA")
 	{
-		*getOutputStream() << "Error: " << filename << " is of the type " << NFA_json["type"] << " and not NFA"
-				  << std::endl;
+		*getErrorOutputStream() << "Error: " << filename << " is of the type " << NFA_json["type"] << " and not NFA"
+								<< std::endl;
 		return false;
 	}
 
     if (NFA_json.contains("eps"))
     {
-        *getOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
+        *getErrorOutputStream() << "Error: \"" << filename << "\" has an invalid format" << std::endl;
         return false;
     }
 
@@ -138,7 +138,7 @@ bool NFA::isLegal() const
 
 	if (getEpsilon() != ' ')
 	{
-		*getOutputStream() << "Error: NFA " << getID() << " has an epsilon symbol '" << getEpsilon() << "'" << std::endl;
+		*getErrorOutputStream() << "Error: NFA " << getID() << " has an epsilon symbol '" << getEpsilon() << "'" << std::endl;
 		is_legal = false;
 	}
 

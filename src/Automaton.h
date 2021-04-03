@@ -56,6 +56,8 @@ public:
 	bool removeTransitions(const std::string& s_str, char a);
 	std::set<std::string> transition(const std::string& s_str, char a) const;
 	std::set<std::string> transitionSetOfStates(const std::set<std::string>& set_of_states, char a) const;
+	std::set<std::string> reverseTransition(const std::string& s_str, char a) const;
+	std::set<std::string> reverseTransitionSetOfStates(const std::set<std::string>& set_of_states, char a) const;
 	std::set<std::string> eClosure(const std::set<std::string>& set_of_states) const;
 	/* Checks if the given sequence of symbols ends at an accepting state */
 	bool accepts(const std::string& string_w) const;

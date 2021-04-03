@@ -34,8 +34,8 @@ bool Alphabet::removeSymbol(char symbol)
 {
 	if (alphabet.find(symbol) == alphabet.end())
 	{
-		*getOutputStream() << "Error: alphabet " << getID() << ", couldn't remove symbol '" << symbol << "' from the alphabet"
-				  << std::endl;
+		*getErrorOutputStream() << "Error: alphabet " << getID() << ", couldn't remove symbol '" << symbol << "' from the alphabet"
+								<< std::endl;
 		return false;
 	}
 	alphabet.erase(symbol);
@@ -46,7 +46,7 @@ bool Alphabet::isSymbolInAlphabet(char a) const
 {
 	if (alphabet.find(a) != alphabet.end())
 		return true;
-	*getOutputStream() << "Error: alphabet " << getID() << ", symbol " << a << " is not in alphabet" << std::endl;
+	*getErrorOutputStream() << "Error: alphabet " << getID() << ", symbol " << a << " is not in alphabet" << std::endl;
 	return false;
 }
 
@@ -90,14 +90,14 @@ char Alphabet::getStandardEpsilon()
 	return standard_epsilon;
 }
 
-std::ostream* Alphabet::getOutputStream() const
+std::ostream* Alphabet::getErrorOutputStream() const
 {
-	return output_stream;
+	return error_output_stream;
 }
 
 void Alphabet::setOutputStream(std::ostream& _output_stream)
 {
-	output_stream = &_output_stream;
+	error_output_stream = &_output_stream;
 }
 
 int Alphabet::getID() const

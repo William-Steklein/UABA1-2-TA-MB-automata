@@ -485,7 +485,7 @@ void RE::unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_typ
 	if (start_nodes.empty())
 	{
 		std::string node_type_string = node_type == dot ? "union" : "concatenation";
-		*getOutputStream() << "Error: empty " + node_type_string << std::endl;
+		*getErrorOutputStream() << "Error: empty " + node_type_string << std::endl;
 		return;
 	}
 	else if (start_nodes.size() == 1 && !start_node)
@@ -536,7 +536,7 @@ void RE::kleeneStar()
 {
 	if (empty())
 	{
-		*getOutputStream() << "Error: kleene star on empty regex" << std::endl;
+		*getErrorOutputStream() << "Error: kleene star on empty regex" << std::endl;
 		return;
 	}
 
@@ -781,14 +781,14 @@ bool RE::isLegal(RENode* current_node, bool start) const
 		current_node = start_node;
 		if (!current_node)
 		{
-			*getOutputStream() << "Error: RE " << getID() << " has no start node" << std::endl;
+			*getErrorOutputStream() << "Error: RE " << getID() << " has no start node" << std::endl;
 			return false;
 		}
 	}
 
 	if (current_node->nodetype == star && current_node->children.size() > 1)
 	{
-		*getOutputStream() << "Error: RE " << getID() << " has a star node with more than 1 children" << std::endl;
+		*getErrorOutputStream() << "Error: RE " << getID() << " has a star node with more than 1 children" << std::endl;
 		is_legal = false;
 	}
 
@@ -796,13 +796,13 @@ bool RE::isLegal(RENode* current_node, bool start) const
 	{
 		if (current_node->nodetype == star && child->nodetype == star)
 		{
-			*getOutputStream() << "Error: RE " << getID() << " has a star node under a star node" << std::endl;
+			*getErrorOutputStream() << "Error: RE " << getID() << " has a star node under a star node" << std::endl;
 			is_legal = false;
 		}
 
 		if (current_node->nodetype == dot && child->nodetype == dot)
 		{
-			*getOutputStream() << "Error: RE " << getID() << " has a dot node under a dot node" << std::endl;
+			*getErrorOutputStream() << "Error: RE " << getID() << " has a dot node under a dot node" << std::endl;
 			is_legal = false;
 		}
 	}
