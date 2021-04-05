@@ -13,6 +13,7 @@ class DFA : public Automaton
 
 public:
 	DFA() = default;
+	DFA(int no_id);
 	DFA(const std::string& json_filename);
 	DFA(const DFA& dfa1, const DFA& dfa2, bool intersection);
 	friend bool operator==(const DFA& dfa1, const DFA& dfa2);
@@ -26,8 +27,8 @@ public:
 
 	void product(const DFA& dfa1, const DFA& dfa2, bool intersection);
 	DFA minimize() const;
-	void printTable(std::ostream& output_stream = std::cout) const;
-
+	void printTable(const std::map<std::string, std::map<std::string, bool>>& _table = {},
+			std::ostream& output_stream = std::cout) const;
 
 	bool isLegal() const override;
 
@@ -39,7 +40,8 @@ private:
 	static RE* getLoopsRE(std::map<std::string,
 			std::map<std::string, RE*>>& transitionsRE,
 			const std::string& target_state);
-	std::map<std::string, std::map<std::string, bool>> getTable(const DFA& dfa2 = DFA(), bool is_minimize = true) const;
+	std::map<std::string, std::map<std::string, bool>>
+	getTable(const DFA& dfa2 = DFA(1), bool is_minimize = true) const;
 	bool placeTableMark(const std::string& s1, const std::string& s2,
 			std::map<std::string, std::map<std::string, bool>>& table, const DFA& dfa2, bool is_minimize = true) const;
 };

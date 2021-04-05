@@ -31,6 +31,12 @@ json DFA::save() const
 	return automaton_json;
 }
 
+DFA::DFA(int no_id)
+{
+	if (no_id)
+		decrementID();
+}
+
 DFA::DFA(const std::string& json_filename)
 {
 	DFA::load(json_filename);
@@ -47,6 +53,7 @@ bool operator==(const DFA& dfa1, const DFA& dfa2)
 		return false;
 
 	std::map<std::string, std::map<std::string, bool>> table = dfa1.getTable(dfa2, false);
+	dfa1.printTable(table);
 
 	if (table[dfa1.getStartState()][dfa2.getStartState()] || table[dfa2.getStartState()][dfa1.getStartState()])
 		return false;
@@ -136,7 +143,7 @@ RE DFA::toRE() const
 {
 	std::set<std::string> states_to_eliminate = getAllStates();
 	std::set<std::string> accepting_states;
-	std::map<std::string, std::map<std::string, RE*>> current_transitions = transitionsToRE();
+	std::map<std::string, std::map<std::string, RE*>> current_transitions;
 
 	for (const auto& state : states_to_eliminate)
 	{
@@ -144,109 +151,132 @@ RE DFA::toRE() const
 			accepting_states.insert(state);
 	}
 
-	std::string accepting_state = *accepting_states.begin();
+	std::vector<RE*> final_res;
 
-	// remove startstate and acceptingstate from states_to_eliminate
-	states_to_eliminate.erase(getStartState());
-	states_to_eliminate.erase(accepting_state);
-
-	for (const auto& elistate : states_to_eliminate)
+	while (!accepting_states.empty())
 	{
-		std::map<std::string, RE*> inputtransitions = getInputTransitionsRE(current_transitions, elistate);
-		std::map<std::string, RE*> outputtransitions = current_transitions[elistate];
-		for (auto& inputtransition : inputtransitions)
+		current_transitions = transitionsToRE();
+		std::string accepting_state = *accepting_states.begin();
+		accepting_states.erase(accepting_states.begin());
+
+		// remove startstate and acceptingstate from states_to_eliminate
+		states_to_eliminate.erase(getStartState());
+		states_to_eliminate.erase(accepting_state);
+
+		for (const auto& elistate : states_to_eliminate)
 		{
-			for (auto& outputtransition : outputtransitions)
+			std::map<std::string, RE*> inputtransitions = getInputTransitionsRE(current_transitions, elistate);
+			std::map<std::string, RE*> outputtransitions = current_transitions[elistate];
+			for (auto& inputtransition : inputtransitions)
 			{
-				// if outputtransition goes to elistate
-				if (outputtransition.first == elistate || inputtransition.first == elistate)
-					continue;
-
-				std::vector<RE*> REs;
-
-				// get transition from inputstate to elistate
-				REs.push_back(inputtransition.second);
-
-				// get the loop transition on elistate if it exists
-				// if multiple loops then do union
-				RE* temp_RE = getLoopsRE(current_transitions, elistate);
-
-				if (!temp_RE->empty())
+				for (auto& outputtransition : outputtransitions)
 				{
-					temp_RE->kleeneStar();
-					REs.push_back(temp_RE);
+					// if outputtransition goes to elistate
+					if (outputtransition.first == elistate || inputtransition.first == elistate)
+						continue;
+
+					std::vector<RE*> REs;
+
+					// get transition from inputstate to elistate
+					REs.push_back(inputtransition.second);
+
+					// get the loop transition on elistate if it exists
+					// if multiple loops then do union
+					RE* temp_RE = getLoopsRE(current_transitions, elistate);
+
+					if (temp_RE && !temp_RE->empty())
+					{
+						temp_RE->kleeneStar();
+						REs.push_back(temp_RE);
+					}
+
+					// get transition from elistate to outputtransition
+					REs.push_back(outputtransition.second);
+
+					// concatenate
+					RE* new_RE2 = new RE;
+					new_RE2->concatenateRE(REs, false);
+
+					delete temp_RE;
+
+					// put in current_transitions
+					if (current_transitions[inputtransition.first].find(outputtransition.first)
+						!= current_transitions[inputtransition.first].end())
+					{
+						RE* new_new_RE = new RE;
+						new_new_RE->unionRE({ current_transitions[inputtransition.first][outputtransition.first],
+											  new_RE2 });
+						delete new_RE2;
+						delete current_transitions[inputtransition.first][outputtransition.first];
+						current_transitions[inputtransition.first][outputtransition.first] = new_new_RE;
+					}
+					else
+						current_transitions[inputtransition.first][outputtransition.first] = new_RE2;
 				}
-
-				// get transition from elistate to outputtransition
-				REs.push_back(outputtransition.second);
-
-				// concatenate
-				RE* new_RE2 = new RE;
-				new_RE2->concatenateRE(REs);
-
-				delete temp_RE;
-
-				// put in current_transitions
-				if (current_transitions[inputtransition.first].find(outputtransition.first)
-					!= current_transitions[inputtransition.first].end())
-				{
-					RE* new_new_RE = new RE;
-					new_new_RE->unionRE({ current_transitions[inputtransition.first][outputtransition.first],
-										  new_RE2 });
-					delete new_RE2;
-					delete current_transitions[inputtransition.first][outputtransition.first];
-					current_transitions[inputtransition.first][outputtransition.first] = new_new_RE;
-				}
-				else
-					current_transitions[inputtransition.first][outputtransition.first] = new_RE2;
 			}
+			// remove elistate
+			for (const auto& inputtransition : inputtransitions)
+			{
+				delete current_transitions[inputtransition.first][elistate];
+				current_transitions[inputtransition.first].erase(
+						current_transitions[inputtransition.first].find(elistate));
+			}
+			for (const auto& transition : current_transitions[elistate])
+				delete transition.second;
+			current_transitions.erase((current_transitions.find(elistate)));
 		}
-		// remove elistate
-		for (const auto& inputtransition : inputtransitions)
+
+		std::ostream bitBucket(0);
+
+		if (getStartState() == accepting_state)
 		{
-			delete current_transitions[inputtransition.first][elistate];
-			current_transitions[inputtransition.first].erase(current_transitions[inputtransition.first].find(elistate));
+			final_res.push_back(current_transitions[accepting_state][accepting_state]);
+			continue;
 		}
-		for (const auto& transition : current_transitions[elistate])
-			delete transition.second;
-		current_transitions.erase((current_transitions.find(elistate)));
+
+		// ((R+S(U*)T)*)S(U*)
+		RE* RE_R = getLoopsRE(current_transitions, getStartState());
+		RE* RE_S = current_transitions[getStartState()][accepting_state];
+		RE* RE_T = current_transitions[accepting_state][getStartState()];
+		RE* RE_U = getLoopsRE(current_transitions, accepting_state);
+
+		delete current_transitions[getStartState()][getStartState()];
+		delete current_transitions[accepting_state][accepting_state];
+
+		RE_U->setOutputStream(bitBucket);
+		RE_U->kleeneStar();
+
+		RE* result_RE = new RE;
+		result_RE->setOutputStream(bitBucket);
+
+		RE* temp1 = new RE;
+		temp1->setOutputStream(bitBucket);
+		temp1->concatenateRE({ RE_S, RE_U, RE_T }, false);
+		result_RE->unionRE({ RE_R, temp1 });
+		delete temp1;
+
+		result_RE->kleeneStar();
+		result_RE->concatenateRE({ RE_S, RE_U });
+
+		delete RE_R;
+		delete RE_S;
+		delete RE_T;
+		delete RE_U;
+
+		final_res.push_back(result_RE);
 	}
-
-	std::ostream bitBucket(0);
-
-	// ((R+S(U*)T)*)S(U*)
-	RE* RE_R = getLoopsRE(current_transitions, getStartState());
-	RE* RE_S = current_transitions[getStartState()][accepting_state];
-	RE* RE_T = current_transitions[accepting_state][getStartState()];
-	RE* RE_U = getLoopsRE(current_transitions, accepting_state);
-
-	delete current_transitions[getStartState()][getStartState()];
-	delete current_transitions[accepting_state][accepting_state];
-
-	RE_U->setOutputStream(bitBucket);
-	RE_U->kleeneStar();
-
 	RE final_RE;
-	final_RE.setOutputStream(bitBucket);
+	final_RE.unionRE(final_res);
 
-	RE* temp1 = new RE;
-	temp1->setOutputStream(bitBucket);
-	temp1->concatenateRE({ RE_S, RE_U, RE_T });
-	final_RE.unionRE({ RE_R, temp1 });
-	delete temp1;
-
-	final_RE.kleeneStar();
-	final_RE.concatenateRE({ RE_S, RE_U });
-
-	delete RE_R;
-	delete RE_S;
-	delete RE_T;
-	delete RE_U;
+	for (const auto& result_RE : final_res)
+		delete result_RE;
 
 	final_RE.setAlphabet(getAlphabet());
 	final_RE.setEpsilon('e');
 	final_RE.addSymbol('e');
 	final_RE.setOutputStream(std::cerr);
+
+	final_RE.isLegal();
 
 	return final_RE;
 }
@@ -315,6 +345,10 @@ void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 
 DFA DFA::minimize() const
 {
+	if (!isLegal())
+		*getErrorOutputStream() << "Error: Could not minimize DFA " << getID() << ", because it's not legal"
+								<< std::endl;
+
 	DFA dfa;
 	dfa.setAlphabet(getAlphabet());
 
@@ -368,16 +402,16 @@ DFA DFA::minimize() const
 				is_start_state = true;
 		}
 
-		dfa.addState(getSetOfStatesString(combined_state), isSetOfStatesAccepting(combined_state));
+		dfa.addState(getSetOfStatesString2(combined_state), isSetOfStatesAccepting(combined_state));
 		if (is_start_state)
-			dfa.setStartState(getSetOfStatesString(combined_state));
+			dfa.setStartState(getSetOfStatesString2(combined_state));
 	}
 
 	for (const auto& state : single_states)
 	{
-		dfa.addState(state, isStateAccepting(state));
+		dfa.addState(getSetOfStatesString2({ state }), isStateAccepting(state));
 		if (state == getStartState())
-			dfa.setStartState(state);
+			dfa.setStartState(getSetOfStatesString2({ state }));
 	}
 
 	for (const auto& combined_state : combined_states)
@@ -385,25 +419,22 @@ DFA DFA::minimize() const
 		for (char a : getAlphabet())
 		{
 			std::set<std::string> output_states = transitionSetOfStates(combined_state, a);
-			if (output_states.size() > 1)
-			{
-				bool transition_added = false;
-				for (const auto& _combined_state : combined_states)
-				{
-					if (_combined_state.find(*output_states.begin()) != _combined_state.end())
-					{
-						dfa.addTransition(getSetOfStatesString(combined_state), getSetOfStatesString(_combined_state),
-								a);
-						transition_added = true;
-					}
-				}
+			bool transition_added = false;
 
-				if (!transition_added)
-					*getErrorOutputStream() << "Error: Could not minimize DFA " << getID() << std::endl;
+			for (const auto& _combined_state : combined_states)
+			{
+				if (_combined_state.find(*output_states.begin()) != _combined_state.end())
+				{
+					dfa.addTransition(getSetOfStatesString2(combined_state), getSetOfStatesString2(_combined_state),
+							a);
+					transition_added = true;
+				}
 			}
 
-			else
-				dfa.addTransition(getSetOfStatesString(combined_state), *output_states.begin(), a);
+			if (!transition_added && output_states.size() == 1)
+				dfa.addTransition(getSetOfStatesString2(combined_state), getSetOfStatesString2(output_states), a);
+			else if (!transition_added)
+				*getErrorOutputStream() << "Error: Could not minimize DFA " << getID() << std::endl;
 		}
 
 	}
@@ -420,14 +451,14 @@ DFA DFA::minimize() const
 			{
 				if (combined_state.find(output_state) != combined_state.end())
 				{
-					dfa.addTransition(state, getSetOfStatesString(combined_state), a);
+					dfa.addTransition(getSetOfStatesString2({ state }), getSetOfStatesString2(combined_state), a);
 					state_added = true;
 					break;
 				}
 			}
 
 			if (!state_added)
-				dfa.addTransition(state, output_state, a);
+				dfa.addTransition(getSetOfStatesString2({ state }), getSetOfStatesString2({ output_state }), a);
 		}
 	}
 
@@ -436,9 +467,14 @@ DFA DFA::minimize() const
 	return dfa;
 }
 
-void DFA::printTable(std::ostream& output_stream) const
+void
+DFA::printTable(const std::map<std::string, std::map<std::string, bool>>& _table, std::ostream& output_stream) const
 {
-	std::map<std::string, std::map<std::string, bool>> table = getTable();
+	std::map<std::string, std::map<std::string, bool>> table;
+	if (!_table.empty())
+		table = _table;
+	else
+		table = getTable();
 
 	std::string previous_state;
 
@@ -454,7 +490,7 @@ void DFA::printTable(std::ostream& output_stream) const
 
 		for (const auto& state2 : table2.second)
 		{
-			output_stream << "\t";
+			output_stream << "   ";
 
 			if (table[table2.first][state2.first])
 				output_stream << "X";
@@ -472,11 +508,11 @@ void DFA::printTable(std::ostream& output_stream) const
 	for (const auto& table2 : table)
 	{
 		if (table2 == *(table.begin()))
-			output_stream << " \t" << table2.first;
+			output_stream << "    " << table2.first;
 		else if (table2 == *(table.rbegin()))
 			continue;
 		else
-			output_stream << "\t" << table2.first;
+			output_stream << "   " << table2.first;
 	}
 
 	output_stream << std::endl;
@@ -715,7 +751,7 @@ bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
 				else
 					is_state2_accepting = dfa2.isStateAccepting(state2);
 
-				if ((!is_state1_accepting && !is_state2_accepting) || (is_state1_accepting &&is_state2_accepting))
+				if ((!is_state1_accepting && !is_state2_accepting) || (is_state1_accepting && is_state2_accepting))
 				{
 					table[state][state2] = true;
 					table[state2][state] = true;
@@ -727,89 +763,3 @@ bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
 
 	return new_marks_placed;
 }
-
-//std::map<std::string, std::map<std::string, bool>> DFA::getTable() const
-//{
-//	std::map<std::string, std::map<std::string, bool>> table;
-//
-//	if (getAllStates().empty() || getAllStates().size() == 1)
-//		return table;
-//
-//	for (const auto& state : getAllStates())
-//	{
-//		for (const auto& state2 : getAllStates())
-//		{
-//			if (state2 == state)
-//				continue;
-//
-//			if ((isStateAccepting(state) && !isStateAccepting(state2)) ||
-//				(!isStateAccepting(state) && isStateAccepting(state2)))
-//			{
-//				table[state][state2] = true;
-//				table[state2][state] = true;
-//			}
-//			else
-//			{
-//				table[state][state2] = false;
-//				table[state2][state] = false;
-//			}
-//		}
-//	}
-//
-//	bool new_marks_placed = true;
-//	std::map<std::string, std::set<std::string>> checked;
-//
-//	while (new_marks_placed)
-//	{
-//		new_marks_placed = false;
-//		for (const auto& table2 : table)
-//		{
-//			for (const auto& state2 : table2.second)
-//			{
-//				// if there is a mark
-//				// maybe put this in a helpfunction
-//				bool is_checked = state2.second;
-//				bool is_checked2 = checked[table2.first].find(state2.first) == checked[table2.first].end();
-//				if (is_checked && is_checked2)
-//				{
-//					if (placeTableMark(table2.first, state2.first, table))
-//						new_marks_placed = true;
-//
-//					checked[table2.first].insert(state2.first);
-//				}
-//			}
-//		}
-//	}
-//
-//	return table;
-//}
-//
-//bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
-//		std::map<std::string, std::map<std::string, bool>>& table) const
-//{
-//	table[s1][s2] = true;
-//	bool new_marks_placed = false;
-//
-//	for (char c : getAlphabet())
-//	{
-//		std::set<std::string> rtrans1 = reverseTransition(s1, c);
-//		for (const auto& trans1 : rtrans1)
-//		{
-//			std::set<std::string> rtrans2 = reverseTransition(s2, c);
-//			for (const auto& trans2 : rtrans2)
-//			{
-//				bool s1_accepting = isStateAccepting(trans1);
-//				bool s2_accepting = isStateAccepting(trans2);
-//
-//				if ((!s1_accepting && !s2_accepting) || (s1_accepting && s2_accepting))
-//				{
-//					table[trans1][trans2] = true;
-//					table[trans2][trans1] = true;
-//					new_marks_placed = true;
-//				}
-//			}
-//		}
-//	}
-//
-//	return new_marks_placed;
-//}

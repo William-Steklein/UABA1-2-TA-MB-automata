@@ -48,6 +48,7 @@ public:
 	std::set<std::string> getAllStates() const;
 	bool isSetOfStatesAccepting(const std::set<std::string>& set_of_states) const;
 	static std::string getSetOfStatesString(const std::set<std::string>& set_of_states);
+	static std::string getSetOfStatesString2(const std::set<std::string>& set_of_states);
 	bool stateExists(const std::string& s_str) const;
 
 	virtual bool addTransition(const std::string& s1_str, const std::string& s2_str, char a);

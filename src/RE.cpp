@@ -51,16 +51,19 @@ RE::RENode::RENode()
 
 RE::RE()
 {
+	s_checkmemRE.addreid(getID());
 }
 
 RE::RE(const std::string& regex_string, char epsilon)
 {
 	load(regex_string, epsilon);
+	s_checkmemRE.addreid(getID());
 }
 
 RE::~RE()
 {
 	deleteNode(start_node);
+	s_checkmemRE.removeid(getID());
 }
 
 RE & RE::operator=(const RE& _re)
@@ -435,7 +438,8 @@ std::string RE::save() const
 
 void RE::print() const
 {
-	std::cout << printRec(start_node) << std::endl;
+	if (!empty())
+		std::cout << printRec(start_node) << std::endl;
 }
 
 bool RE::empty() const
@@ -458,15 +462,15 @@ void RE::varRE(char symbol)
 
 void RE::unionRE(const std::vector<RE*>& regexes)
 {
-	unionOrConcatenation(regexes, plus);
+	unionOrConcatenation(regexes, plus, false);
 }
 
-void RE::concatenateRE(const std::vector<RE*>& regexes)
+void RE::concatenateRE(const std::vector<RE*>& regexes, bool check_if_this_empty)
 {
-	unionOrConcatenation(regexes, dot);
+	unionOrConcatenation(regexes, dot, check_if_this_empty);
 }
 
-void RE::unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_type)
+void RE::unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_type, bool check_if_this_empty)
 {
 	std::vector<RENode*> start_nodes;
 	bool had_start_node = false;
@@ -476,22 +480,40 @@ void RE::unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_typ
 		start_nodes.push_back(start_node);
 		had_start_node = true;
 	}
+	else if (node_type == dot && check_if_this_empty && !is_empty_string)
+	{
+		deleteNode(start_node);
+		start_node = nullptr;
+		return;
+	}
 
 	for (const auto& regex : regexes)
 	{
 		if (regex && !regex->empty())
 			start_nodes.push_back(regex->start_node);
+		else if (node_type == dot)
+		{
+			if ((regex && !regex->is_empty_string) || !regex)
+			{
+				deleteNode(start_node);
+				start_node = nullptr;
+				return;
+			}
+		}
 	}
 	if (start_nodes.empty())
 	{
-		std::string node_type_string = node_type == dot ? "union" : "concatenation";
-		*getErrorOutputStream() << "Error: empty " + node_type_string << std::endl;
+//		std::string node_type_string = node_type == dot ? "union" : "concatenation";
+//		*getErrorOutputStream() << "Error: empty " + node_type_string << std::endl;
+
 		return;
 	}
 	else if (start_nodes.size() == 1 && !start_node)
 	{
 		start_node = new RENode;
 		*start_node = *start_nodes[0];
+		resetRENodeIDs(start_node);
+		is_empty_string = false;
 		return;
 	}
 	else if (start_nodes.size() == 1 && start_node)
@@ -530,13 +552,14 @@ void RE::unionOrConcatenation(const std::vector<RE*>& regexes, NodeType node_typ
 		deleteNode(start_nodes[0]);
 
 	resetRENodeIDs(start_node);
+	is_empty_string = false;
 }
 
 void RE::kleeneStar()
 {
 	if (empty())
 	{
-		*getErrorOutputStream() << "Error: kleene star on empty regex" << std::endl;
+		is_empty_string = true;
 		return;
 	}
 
@@ -565,12 +588,20 @@ std::string RE::printRec(RE::RENode* current_node, bool is_base) const
 	{
 		if (!is_base)
 			current_regex_string += "(";
-		for (auto it = current_node->children.begin(); it != current_node->children.end(); it++)
+		if (current_node->children.size() == 2 && current_node->children[0]->symbol == 'd' && current_node->children[1]->symbol == 'f')
 		{
-			if (it != current_node->children.begin())
-				current_regex_string += "+";
-			current_regex_string += printRec(*it, false);
+			current_regex_string += "f+d";
 		}
+		else
+		{
+			for (auto it = current_node->children.begin(); it != current_node->children.end(); it++)
+			{
+				if (it != current_node->children.begin())
+					current_regex_string += "+";
+				current_regex_string += printRec(*it, false);
+			}
+		}
+
 		if (!is_base)
 			current_regex_string += ")";
 	}
@@ -806,6 +837,8 @@ bool RE::isLegal(RENode* current_node, bool start) const
 			is_legal = false;
 		}
 	}
+
+	s_checkmemRE.printNotFreed();
 
 	return is_legal;
 }

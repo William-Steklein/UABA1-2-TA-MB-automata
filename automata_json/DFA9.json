@@ -1,0 +1,86 @@
+{
+  "type": "DFA",
+  "alphabet": [
+    "n",
+    "h"
+  ],
+  "states": [
+    {
+      "name": "1",
+      "starting": false,
+      "accepting": true
+    },
+    {
+      "name": "3",
+      "starting": false,
+      "accepting": false
+    },
+    {
+      "name": "2",
+      "starting": false,
+      "accepting": false
+    },
+    {
+      "name": "0",
+      "starting": true,
+      "accepting": false
+    },
+    {
+      "name": "4",
+      "starting": false,
+      "accepting": false
+    }
+  ],
+  "transitions": [
+    {
+      "from": "1",
+      "to": "2",
+      "input": "h"
+    },
+    {
+      "from": "1",
+      "to": "2",
+      "input": "n"
+    },
+    {
+      "from": "0",
+      "to": "1",
+      "input": "h"
+    },
+    {
+      "from": "0",
+      "to": "3",
+      "input": "n"
+    },
+    {
+      "from": "3",
+      "to": "1",
+      "input": "h"
+    },
+    {
+      "from": "3",
+      "to": "3",
+      "input": "n"
+    },
+    {
+      "from": "2",
+      "to": "4",
+      "input": "h"
+    },
+    {
+      "from": "2",
+      "to": "1",
+      "input": "n"
+    },
+    {
+      "from": "4",
+      "to": "4",
+      "input": "h"
+    },
+    {
+      "from": "4",
+      "to": "1",
+      "input": "n"
+    }
+  ]
+}

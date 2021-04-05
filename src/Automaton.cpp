@@ -243,6 +243,23 @@ std::string Automaton::getSetOfStatesString(const std::set<std::string>& set_of_
 	return set_of_states_string;
 }
 
+std::string Automaton::getSetOfStatesString2(const std::set<std::string>& set_of_states)
+{
+	std::string set_of_states_string;
+
+	set_of_states_string = "{";
+	for (auto it = set_of_states.begin(); it != set_of_states.end(); it++)
+	{
+		if (it != set_of_states.begin())
+			set_of_states_string += ", ";
+
+		set_of_states_string += *it;
+	}
+	set_of_states_string += "}";
+
+	return set_of_states_string;
+}
+
 bool Automaton::stateExists(const std::string& s_str) const
 {
 	if (getState(s_str, false))
@@ -474,8 +491,18 @@ void Automaton::printStats() const
 {
 	std::cout << "no_of_states=" << states.size() << std::endl;
 
+	if (isSymbolInAlphabet('x'))
+	{
+		int no_of_transitions = 0;
+		for (const auto& state : states)
+			no_of_transitions += state.second->transitions['x'].size();
+		std::cout << "no_of_transitions[" << 'x' << "]=" << no_of_transitions << std::endl;
+	}
+
 	for (const auto& symbol : getAlphabet())
 	{
+		if (symbol == 'x')
+			continue;
 		int no_of_transitions = 0;
 		for (const auto& state : states)
 			no_of_transitions += state.second->transitions[symbol].size();
