@@ -89,14 +89,14 @@ void CFG::print(std::ostream &output_stream) const {
     for (const auto& symbol : symbols) {
         if (symbol.second->is_var) {
             for (const std::vector<Symbol*>& symbol_string : symbol.second->productions) {
-                output_stream << "\t" << symbol.first << " -> " << "'";
+                output_stream << "    " << symbol.first << " -> " << "`";
                 is_first = true;
                 for (Symbol* other_symbol : symbol_string) {
                     if (!is_first) output_stream << " ";
                     else is_first = false;
                     output_stream << other_symbol->name;
                 }
-                output_stream << "'" << std::endl;
+                output_stream << "`" << std::endl;
             }
         }
     }

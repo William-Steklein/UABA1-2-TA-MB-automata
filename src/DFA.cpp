@@ -103,12 +103,12 @@ NFA DFA::toNFA() const
 
 	nfa.setAlphabet(getAlphabet());
 
-	for (const auto& state : getAllStates())
+	for (const auto& state: getAllStates())
 		nfa.addState(state, isStateAccepting(state));
 
-	for (const auto& state : getAllStates())
+	for (const auto& state: getAllStates())
 	{
-		for (char a : getAlphabet())
+		for (char a: getAlphabet())
 			nfa.addTransition(state, *transition(state, a).begin(), a);
 	}
 
@@ -125,12 +125,12 @@ ENFA DFA::toENFA() const
 	enfa.setEpsilon(Alphabet::getStandardEpsilon());
 	enfa.addSymbol(Alphabet::getStandardEpsilon());
 
-	for (const auto& state : getAllStates())
+	for (const auto& state: getAllStates())
 		enfa.addState(state, isStateAccepting(state));
 
-	for (const auto& state : getAllStates())
+	for (const auto& state: getAllStates())
 	{
-		for (char a : getAlphabet())
+		for (char a: getAlphabet())
 			enfa.addTransition(state, *transition(state, a).begin(), a);
 	}
 
@@ -145,7 +145,7 @@ RE DFA::toRE() const
 	std::set<std::string> accepting_states;
 	std::map<std::string, std::map<std::string, RE*>> current_transitions;
 
-	for (const auto& state : states_to_eliminate)
+	for (const auto& state: states_to_eliminate)
 	{
 		if (isStateAccepting(state))
 			accepting_states.insert(state);
@@ -163,13 +163,13 @@ RE DFA::toRE() const
 		states_to_eliminate.erase(getStartState());
 		states_to_eliminate.erase(accepting_state);
 
-		for (const auto& elistate : states_to_eliminate)
+		for (const auto& elistate: states_to_eliminate)
 		{
 			std::map<std::string, RE*> inputtransitions = getInputTransitionsRE(current_transitions, elistate);
 			std::map<std::string, RE*> outputtransitions = current_transitions[elistate];
-			for (auto& inputtransition : inputtransitions)
+			for (auto& inputtransition: inputtransitions)
 			{
-				for (auto& outputtransition : outputtransitions)
+				for (auto& outputtransition: outputtransitions)
 				{
 					// if outputtransition goes to elistate
 					if (outputtransition.first == elistate || inputtransition.first == elistate)
@@ -215,13 +215,13 @@ RE DFA::toRE() const
 				}
 			}
 			// remove elistate
-			for (const auto& inputtransition : inputtransitions)
+			for (const auto& inputtransition: inputtransitions)
 			{
 				delete current_transitions[inputtransition.first][elistate];
 				current_transitions[inputtransition.first].erase(
 						current_transitions[inputtransition.first].find(elistate));
 			}
-			for (const auto& transition : current_transitions[elistate])
+			for (const auto& transition: current_transitions[elistate])
 				delete transition.second;
 			current_transitions.erase((current_transitions.find(elistate)));
 		}
@@ -268,7 +268,7 @@ RE DFA::toRE() const
 	RE final_RE;
 	final_RE.unionRE(final_res);
 
-	for (const auto& result_RE : final_res)
+	for (const auto& result_RE: final_res)
 		delete result_RE;
 
 	final_RE.setAlphabet(getAlphabet());
@@ -310,7 +310,7 @@ void DFA::product(const DFA& dfa1, const DFA& dfa2, bool intersection)
 		pair_of_input_states = pairs_of_input_states.front();
 		pairs_of_input_states.erase(pairs_of_input_states.begin());
 
-		for (char a : getAlphabet())
+		for (char a: getAlphabet())
 		{
 			// transitions
 			pair_of_output_states.first = *dfa1.transition(pair_of_input_states.first, a).begin();
@@ -355,14 +355,14 @@ DFA DFA::minimize() const
 	std::map<std::string, std::map<std::string, bool>> table = getTable(DFA(), true);
 	std::set<std::set<std::string>> combined_states;
 
-	for (const auto& table2 : table)
+	for (const auto& table2: table)
 	{
-		for (const auto& state2 : table2.second)
+		for (const auto& state2: table2.second)
 		{
 			if (!state2.second)
 			{
 				bool added_state = false;
-				for (const auto& combined_state : combined_states)
+				for (const auto& combined_state: combined_states)
 				{
 					if ((combined_state.find(table2.first) != combined_state.end()) ||
 						(combined_state.find(state2.first) != combined_state.end()))
@@ -392,10 +392,10 @@ DFA DFA::minimize() const
 
 	std::set<std::string> single_states = getAllStates();
 
-	for (const auto& combined_state : combined_states)
+	for (const auto& combined_state: combined_states)
 	{
 		bool is_start_state = false;
-		for (const auto& state : combined_state)
+		for (const auto& state: combined_state)
 		{
 			single_states.erase(state);
 			if (state == getStartState())
@@ -407,21 +407,21 @@ DFA DFA::minimize() const
 			dfa.setStartState(getSetOfStatesString2(combined_state));
 	}
 
-	for (const auto& state : single_states)
+	for (const auto& state: single_states)
 	{
 		dfa.addState(getSetOfStatesString2({ state }), isStateAccepting(state));
 		if (state == getStartState())
 			dfa.setStartState(getSetOfStatesString2({ state }));
 	}
 
-	for (const auto& combined_state : combined_states)
+	for (const auto& combined_state: combined_states)
 	{
-		for (char a : getAlphabet())
+		for (char a: getAlphabet())
 		{
 			std::set<std::string> output_states = transitionSetOfStates(combined_state, a);
 			bool transition_added = false;
 
-			for (const auto& _combined_state : combined_states)
+			for (const auto& _combined_state: combined_states)
 			{
 				if (_combined_state.find(*output_states.begin()) != _combined_state.end())
 				{
@@ -439,15 +439,15 @@ DFA DFA::minimize() const
 
 	}
 
-	for (const auto& state : single_states)
+	for (const auto& state: single_states)
 	{
-		for (char a : getAlphabet())
+		for (char a: getAlphabet())
 		{
 			std::string output_state = *transition(state, a).begin();
 			bool state_added = false;
 
 			// checks if output_state is in a combined state
-			for (const auto& combined_state : combined_states)
+			for (const auto& combined_state: combined_states)
 			{
 				if (combined_state.find(output_state) != combined_state.end())
 				{
@@ -478,7 +478,7 @@ DFA::printTable(const std::map<std::string, std::map<std::string, bool>>& _table
 
 	std::string previous_state;
 
-	for (const auto& table2 : table)
+	for (const auto& table2: table)
 	{
 		if (table2 == *(table.begin()))
 		{
@@ -488,7 +488,7 @@ DFA::printTable(const std::map<std::string, std::map<std::string, bool>>& _table
 
 		output_stream << table2.first;
 
-		for (const auto& state2 : table2.second)
+		for (const auto& state2: table2.second)
 		{
 			output_stream << "   ";
 
@@ -505,7 +505,7 @@ DFA::printTable(const std::map<std::string, std::map<std::string, bool>>& _table
 		output_stream << std::endl;
 	}
 
-	for (const auto& table2 : table)
+	for (const auto& table2: table)
 	{
 		if (table2 == *(table.begin()))
 			output_stream << "    " << table2.first;
@@ -525,9 +525,9 @@ bool DFA::isLegal() const
 	if (getStartState().empty())
 		is_legal = false;
 
-	for (const auto& state : getAllStates())
+	for (const auto& state: getAllStates())
 	{
-		for (const auto& c : getAlphabet())
+		for (const auto& c: getAlphabet())
 		{
 			std::set<std::string> output_state = transition(state, c);
 
@@ -562,9 +562,9 @@ std::map<std::string, std::map<std::string, RE*>> DFA::transitionsToRE() const
 {
 	std::map<std::string, std::map<std::string, RE*>> new_transitions;
 
-	for (const auto& state : getAllStates())
+	for (const auto& state: getAllStates())
 	{
-		for (char symbol : getAlphabet())
+		for (char symbol: getAlphabet())
 		{
 			RE* new_RE = new RE;
 
@@ -594,9 +594,9 @@ std::map<std::string, RE*> DFA::getInputTransitionsRE(const std::map<std::string
 {
 	std::map<std::string, RE*> input_transitions;
 
-	for (const auto& input_transition : transitionsRE)
+	for (const auto& input_transition: transitionsRE)
 	{
-		for (const auto& output_transition : input_transition.second)
+		for (const auto& output_transition: input_transition.second)
 		{
 			if (output_transition.first == target_state)
 				input_transitions[input_transition.first] = output_transition.second;
@@ -611,7 +611,7 @@ RE* DFA::getLoopsRE(std::map<std::string, std::map<std::string, RE*>>& transitio
 {
 	std::vector<RE*> loops_regexes;
 
-	for (auto& output_transition : transitionsRE[target_state])
+	for (auto& output_transition: transitionsRE[target_state])
 	{
 		if (output_transition.first == target_state)
 			loops_regexes.push_back(output_transition.second);
@@ -646,9 +646,9 @@ std::map<std::string, std::map<std::string, bool>> DFA::getTable(const DFA& dfa2
 	if (all_states.empty() || all_states.size() == 1)
 		return table;
 
-	for (const auto& state : all_states)
+	for (const auto& state: all_states)
 	{
-		for (const auto& state2 : all_states)
+		for (const auto& state2: all_states)
 		{
 			if (state2 == state)
 				continue;
@@ -685,9 +685,9 @@ std::map<std::string, std::map<std::string, bool>> DFA::getTable(const DFA& dfa2
 	while (new_marks_placed)
 	{
 		new_marks_placed = false;
-		for (const auto& table2 : table)
+		for (const auto& table2: table)
 		{
-			for (const auto& state2 : table2.second)
+			for (const auto& state2: table2.second)
 			{
 				// if there is a mark
 				// maybe put this in a helpfunction
@@ -722,21 +722,21 @@ bool DFA::placeTableMark(const std::string& s1, const std::string& s2,
 	std::set<std::string> rtrans1;
 	std::set<std::string> rtrans2;
 
-	for (char c : getAlphabet())
+	for (char c: getAlphabet())
 	{
 		if (dfa1_states.find(s1) != dfa1_states.end())
 			rtrans1 = reverseTransition(s1, c);
 		else
 			rtrans1 = dfa2.reverseTransition(s1, c);
 
-		for (const auto& state : rtrans1)
+		for (const auto& state: rtrans1)
 		{
 			if (dfa1_states.find(s2) != dfa1_states.end())
 				rtrans2 = reverseTransition(s2, c);
 			else
 				rtrans2 = dfa2.reverseTransition(s2, c);
 
-			for (const auto& state2 : rtrans2)
+			for (const auto& state2: rtrans2)
 			{
 				bool is_state1_accepting;
 				bool is_state2_accepting;
