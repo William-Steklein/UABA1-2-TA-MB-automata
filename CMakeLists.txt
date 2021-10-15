@@ -11,11 +11,11 @@ set(GRAPHVIZ_LIB_DIR "/usr/lib/x86_64-linux-gnu/graphviz/")
 
 include_directories("${GRAPHVIZ_INCLUDE_DIR}")
 
-# Set include dir
-include_directories(gtest/include)
-
-# Set Library dir
-link_directories(gtest/lib)
+## Set include dir
+#include_directories(gtest/include)
+#
+## Set Library dir
+#link_directories(gtest/lib)
 
 set(RELEASE_SOURCE_FILES
         src/main.cpp
@@ -31,7 +31,10 @@ set(RELEASE_SOURCE_FILES
         src/RE.h
         src/Alphabet.cpp
         src/Alphabet.h
-        src/AutomataUtils.cpp)
+        src/AutomataUtils.cpp
+        src/CFG.cpp
+        src/CFG.h
+        )
 
 set(DEBUG_SOURCE_FILES
         src/testing/AutomataTests.cpp
@@ -47,11 +50,14 @@ set(DEBUG_SOURCE_FILES
         src/RE.h
         src/Alphabet.cpp
         src/Alphabet.h
-        src/AutomataUtils.cpp)
+        src/AutomataUtils.cpp
+        src/CFG.cpp
+        src/CFG.h
+        )
 
 add_executable(UABA1_TA_Automata ${RELEASE_SOURCE_FILES})
 add_executable(UABA1_TA_Automata_debug ${DEBUG_SOURCE_FILES})
 
 target_link_libraries(UABA1_TA_Automata "${GRAPHVIZ_LIB_DIR}" cgraph gvc)
 target_link_libraries(UABA1_TA_Automata_debug "${GRAPHVIZ_LIB_DIR}" cgraph gvc)
-target_link_libraries(UABA1_TA_Automata_debug gtest)
+#target_link_libraries(UABA1_TA_Automata_debug gtest)
