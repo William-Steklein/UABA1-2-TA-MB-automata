@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include <algorithm>
+#include <fstream>
 #include "json.hpp"
 
 using json = nlohmann::json;
@@ -49,8 +50,11 @@ public:
     bool removeProduction(const std::string& variable_name, const std::vector<std::string>& symbol_string);
     std::vector<std::string> derive(const std::vector<std::string>& symbol_string) const;
 
+    bool accepts(const std::string& str) const;
+
     void clear();
 	bool isLegal() const;
+    bool Empty() const;
 
     std::ostream* getErrorOutputStream() const;
     void setOutputStream(std::ostream& _output_stream);
@@ -58,6 +62,8 @@ public:
 
 private:
     Symbol* getSymbol(const std::string& symbol_name, bool error_output = false) const;
+    std::map<std::vector<Symbol*>, std::set<CFG::Symbol *>> getReverseProductions() const;
+    static void printCYKTable(const std::vector<std::vector<std::pair<std::string, std::set<Symbol*>>>>& table) ;
 };
 
 

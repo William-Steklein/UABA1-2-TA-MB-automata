@@ -52,10 +52,10 @@ int main() {
 	deleteFiles("../DOT_files");
 	deleteFiles("../DOT_images");
 
-    {
-        CFG cfg;
-        cfg.print();
-    }
+    CFG cfg("../mb_json/CFG2.json");
+    cfg.print();
+    cfg.accepts("baaba");  //moet true geven
+    cfg.accepts("abba"); //moet false geven
 
     return 0;
 }

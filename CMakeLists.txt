@@ -5,7 +5,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(CMAKE_CXX_STANDARD 14)
 #set(CMAKE_CXX_FLAGS "-Wall -Werror -O2")
-set(CMAKE_EXE_LINKER_FLAGS -pthread)
+#set(CMAKE_EXE_LINKER_FLAGS -pthread)
 set(GRAPHVIZ_INCLUDE_DIR "/usr/include/graphviz/")
 set(GRAPHVIZ_LIB_DIR "/usr/lib/x86_64-linux-gnu/graphviz/")
 
